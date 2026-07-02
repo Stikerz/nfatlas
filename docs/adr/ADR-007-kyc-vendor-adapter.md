@@ -1,8 +1,8 @@
 # ADR-007: KYC vendor adapter abstraction
 
-**Status:** Proposed — pending EL approval. Vendor selection (Smile / Dojah / Prembly / other) is a separate Phase 0 decision.
+**Status:** Approved (adapter shape). Vendor selection (Smile / Dojah / Prembly / other) is a separate Phase 0 decision recorded via ADR amendment when made.
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead_
+**Approved by:** S1408661 (Engineering Lead) on 2026-07-02
 **Reversibility:** Two-way door for the adapter shape; vendor swap is manageable but not trivial once production users exist.
 
 ## Context

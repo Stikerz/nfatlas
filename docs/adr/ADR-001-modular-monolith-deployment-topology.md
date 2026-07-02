@@ -1,8 +1,8 @@
 # ADR-001: Modular monolith deployment topology
 
-**Status:** Proposed — pending EL approval
+**Status:** Approved
 **Date:** 2026-06-29 (amended 2026-07-02 with V0.5 demo topology addendum — see §V0.5)
-**Approval:** _to be signed off by Engineering Lead_
+**Approved by:** S1408661 (Engineering Lead) on 2026-07-02
 **Reversibility:** Two-way door for V1 (single artefact, single platform). One-way door for V2+ once modules begin extraction.
 
 ## Context

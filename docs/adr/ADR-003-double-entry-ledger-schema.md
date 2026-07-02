@@ -1,8 +1,8 @@
 # ADR-003: Double-entry ledger schema and chart of accounts
 
-**Status:** Proposed — pending EL approval + Finance Lead approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead and Finance Lead (two-approval per `AINE-AGENTS.md §6`)_
+**Approved by:** S1408661 (Engineering Lead + Finance Lead, sole founder) on 2026-07-02
 **Reversibility:** One-way door. Once real money has flowed through the ledger, the schema can be extended but not restructured without a migration that re-balances historical entries.
 
 ## Context

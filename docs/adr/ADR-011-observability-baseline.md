@@ -1,8 +1,8 @@
 # ADR-011: Observability baseline (Sentry + platform logs/metrics in V1)
 
-**Status:** Proposed — pending EL approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead_
+**Approved by:** S1408661 (Engineering Lead) on 2026-07-02
 **Reversibility:** Two-way door. OpenTelemetry SDK in code means migrating to a self-hosted stack later is a config change, not a rewrite.
 
 ## Context

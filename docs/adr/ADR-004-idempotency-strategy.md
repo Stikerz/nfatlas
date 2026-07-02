@@ -1,8 +1,8 @@
 # ADR-004: Idempotency strategy (client-supplied keys, request-hash table)
 
-**Status:** Proposed — pending EL approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead_
+**Approved by:** S1408661 (Engineering Lead) on 2026-07-02
 **Reversibility:** Two-way door.
 
 ## Context

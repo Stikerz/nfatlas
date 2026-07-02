@@ -1,8 +1,8 @@
 # ADR-008: Payment vendor adapter abstraction (Paystack-first)
 
-**Status:** Proposed — pending EL approval + Finance Lead approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead and Finance Lead_
+**Approved by:** S1408661 (Engineering Lead + Finance Lead, sole founder) on 2026-07-02
 **Reversibility:** Two-way door for the adapter shape. Paystack-specific behaviour preserved behind the abstraction.
 
 ## Context

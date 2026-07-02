@@ -1,8 +1,8 @@
 # ADR-010: Self-exclusion enforced via BVN-keyed registry
 
-**Status:** Proposed — pending EL approval + Compliance Lead approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead and Compliance Lead_
+**Approved by:** S1408661 (Engineering Lead + Compliance Lead, sole founder) on 2026-07-02
 **Reversibility:** One-way door once production users exist.
 
 ## Context

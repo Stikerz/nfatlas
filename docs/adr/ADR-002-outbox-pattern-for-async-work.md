@@ -1,8 +1,8 @@
 # ADR-002: Outbox pattern for async work and inter-module events
 
-**Status:** Proposed — pending EL approval
+**Status:** Approved
 **Date:** 2026-06-29
-**Approval:** _to be signed off by Engineering Lead_
+**Approved by:** S1408661 (Engineering Lead) on 2026-07-02
 **Reversibility:** Two-way door. Outbox can be swapped for a broker (Kafka, NATS) later without changing producer code.
 
 ## Context
