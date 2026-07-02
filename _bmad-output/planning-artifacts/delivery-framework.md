@@ -17,17 +17,24 @@ V1 is a **modular monolith** with **6 business modules** delivered in a **26-wee
 
 ---
 
-## 2. Phase summary (26 weeks)
+## 2. Phase summary (~28 weeks — amended 2026-07-02 for V0.5 demo-first pivot)
 
 | Phase | Name | Weeks | Wall-clock | Primary AINE owners | Gate to advance |
 |---|---|---|---|---|---|
-| 0 | Foundations & legal | 0–4 | 4 wks | PM, Compliance & Risk, DevSecOps | NLRC legal opinion + vendors contracted + infra baseline |
-| 1 | Specification | 4–6 | 2 wks | PM, Solution Architect, QA | ADRs approved, stories generated for Phase 2 modules, test strategy signed off |
-| 2 | Platform | 6–9 | 3 wks | DevSecOps, Backend, Frontend | One-command dev env, CI green, baseline observability, RBAC scaffolding |
-| 3 | Module build (closed beta) | 9–17 | 8 wks | Backend, Frontend, QA, Compliance | All 6 modules functional, one real-money beta draw completed end-to-end |
-| 4 | Quality engineering | 17–21 | 4 wks | QA, DevSecOps, Compliance | Coverage gates met, perf gates met, security review clean, accessibility AA |
-| 5 | Containerisation & deploy | 21–23 | 2 wks | DevSecOps, Backend | Production environment live, blue-green deploy proven, rollback tested |
-| 6 | Production readiness & launch | 23–26 | 3 wks | All agents + humans | Sign-off checklist complete, flagship vehicle-prize draw live |
+| 0 | Foundations & legal | 0–4 | 4 wks | PM, Compliance & Risk, DevSecOps | NLRC legal opinion commissioned + vendors shortlisted + local infra baseline |
+| 1 | Specification | 4–6 | 2 wks | PM, Solution Architect, QA | ADRs approved, stories generated for Phase 2 build, test strategy signed off |
+| **2** | **Local platform + V0.5 investor demo** | **6–13** | **7 wks** | Sally (UX design pass), Amelia (build), Tobi (Docker Compose) | V0.5 demo runs end-to-end on a clean laptop; founder walks it 20+ times; see `v0.5-demo-plan.md §6` gates |
+| 3 | Real-launch module completion (closed beta) | 13–19 | 6 wks | Backend, Frontend, QA, Compliance | All V0.5 stubs replaced with real integrations; full RBAC; real KYC vendor; real payment webhook + reconciliation; refund + prize fulfilment; one real-money beta draw end-to-end |
+| 4 | Quality engineering | 19–22 | 3 wks | QA, DevSecOps, Compliance | Coverage gates met, perf gates met, security review clean, accessibility AA |
+| **5** | **First cloud deployment** | **22–25** | **3 wks** | DevSecOps, Backend | Managed-platform account provisioned (first cloud commitment); production environment live; blue-green deploy proven; rollback tested |
+| 6 | Production readiness & launch | 25–28 | 3 wks | All agents + humans | Sign-off checklist complete, flagship vehicle-prize draw live |
+
+**What changed on 2026-07-02** (founder decision to defer managed-platform commitment and build a working demo first — see `v0.5-demo-plan.md`):
+
+- Phase 2 reshaped from "platform provisioning" (3 wks) to "local platform + V0.5 demo build" (7 wks). Adds ~4 weeks but produces a working local demo that supports fundraising, self-validation, and counsel demonstration in parallel to Phase 3.
+- Phase 3 reshaped from "greenfield module build" (8 wks) to "real-launch completion of V0.5" (6 wks). Shorter because V0.5 laid down 90% of the module code; Phase 3 extends and hardens rather than starts from scratch.
+- Phase 5 renamed from "Containerisation & deploy" to "First cloud deployment" — reflecting that this is the moment Atlas signs up to a managed platform and commits to cloud vendor lock-in. Deferred from Phase 2 to Phase 5 per demo-first pivot.
+- Total wall-clock ~28 weeks (was 26). Net +2 weeks against V1 launch date; net acceleration on investor-demo availability by ~15 weeks.
 
 Phases 3 and 4 overlap in practice (QA writes E2E in parallel with module build), but the **gate** for advancing from 3 to 4 is module completeness, not test completeness.
 
