@@ -8,6 +8,9 @@
 # BMad personal overrides (per _bmad/custom/config.user.toml header)
 _bmad/custom/config.user.toml
 
+# Claude Code local settings (per-user)
+.claude/settings.local.json
+
 # Node
 node_modules/
 dist/
