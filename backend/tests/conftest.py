@@ -27,6 +27,8 @@ from atlas.main import app
 _TRUNCATE_TABLES = (
     "audit_log",
     "idempotency_records",
+    "sessions",
+    "otps",
     "users",
 )
 

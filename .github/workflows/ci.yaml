@@ -30,6 +30,9 @@ jobs:
     env:
       ATLAS_ENV: test
       ATLAS_DATABASE_URL: postgresql+asyncpg://atlas:atlas_ci_password@localhost:5432/atlas_test
+      ATLAS_JWT_SIGNING_KEY: ci_jwt_signing_key_00000000000000000000000000000000
+      ATLAS_OTP_PEPPER: ci_otp_pepper_00000000000000000000000000000000000000
+      ATLAS_SESSION_TTL_HOURS: "8"
     defaults:
       run:
         working-directory: backend

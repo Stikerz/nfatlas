@@ -56,6 +56,11 @@ services:
     environment:
       ATLAS_ENV: dev
       ATLAS_DATABASE_URL: postgresql+asyncpg://${ATLAS_POSTGRES_USER:-atlas}:${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/${ATLAS_POSTGRES_DB:-atlas}
+      ATLAS_JWT_SIGNING_KEY: ${ATLAS_JWT_SIGNING_KEY:-dev_jwt_signing_key_do_not_use_in_prod_00000000}
+      ATLAS_OTP_PEPPER: ${ATLAS_OTP_PEPPER:-dev_otp_pepper_do_not_use_in_prod_0000000000000000}
+      ATLAS_SESSION_TTL_HOURS: ${ATLAS_SESSION_TTL_HOURS:-8}
+      ATLAS_MAILHOG_HOST: mailhog
+      ATLAS_MAILHOG_PORT: "1025"
     ports:
       - "8000:8000"
     depends_on:
@@ -80,6 +85,9 @@ services:
     environment:
       ATLAS_ENV: dev
       ATLAS_DATABASE_URL: postgresql+asyncpg://${ATLAS_POSTGRES_USER:-atlas}:${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/${ATLAS_POSTGRES_DB:-atlas}
+      ATLAS_JWT_SIGNING_KEY: ${ATLAS_JWT_SIGNING_KEY:-dev_jwt_signing_key_do_not_use_in_prod_00000000}
+      ATLAS_OTP_PEPPER: ${ATLAS_OTP_PEPPER:-dev_otp_pepper_do_not_use_in_prod_0000000000000000}
+      ATLAS_SESSION_TTL_HOURS: ${ATLAS_SESSION_TTL_HOURS:-8}
     depends_on:
       postgres:
         condition: service_healthy

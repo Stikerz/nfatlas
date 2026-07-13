@@ -40,11 +40,20 @@ class Settings(BaseSettings):
     http_host: str = "0.0.0.0"  # noqa: S104 — container-scoped bind, not host-network
     http_port: int = 8000
 
-    # --- Placeholders for later Week 3 days -------------------------------
-    # (Day 2+ will populate real values; declared here so config.py stays the
-    # single source of truth from Day 1.)
-    jwt_signing_key: SecretStr | None = None
-    otp_pepper: SecretStr | None = None
+    # --- Identity secrets (required from Day 3) ---------------------------
+    jwt_signing_key: SecretStr = Field(
+        description="HS256 signing key for session JWTs (ADR-012 rotation 90d).",
+        min_length=32,
+    )
+    otp_pepper: SecretStr = Field(
+        description="HMAC-SHA-256 pepper for OTP code hashing.",
+        min_length=32,
+    )
+    session_ttl_hours: int = 8  # founder decision 2026-07-13
+
+    # --- Dev-only OTP delivery (Mailhog SMTP stub for real SMS) -----------
+    mailhog_host: str = "mailhog"
+    mailhog_port: int = 1025
 
     # --- Placeholders for later weeks -------------------------------------
     paystack_secret_key: SecretStr | None = None
