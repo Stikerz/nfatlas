@@ -1,0 +1,39 @@
+FROM python:3.13-slim AS builder
+
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml ./
+COPY src/ ./src/
+
+RUN pip install --prefix=/install "."
+
+FROM python:3.13-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app/src
+
+WORKDIR /app
+
+RUN groupadd --system atlas && useradd --system --gid atlas atlas
+
+COPY --from=builder /install /usr/local
+COPY --chown=atlas:atlas src/ ./src/
+COPY --chown=atlas:atlas migrations/ ./migrations/
+
+USER atlas
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2); sys.exit(0)" || exit 1
+
+CMD ["uvicorn", "atlas.main:app", "--host", "0.0.0.0", "--port", "8000"]
