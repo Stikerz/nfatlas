@@ -1,0 +1,25 @@
+name: atlas_mobile
+description: Project Atlas — consumer mobile (Flutter, V0.5 investor demo)
+publish_to: none
+version: 0.5.0+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.5.1        # State management (founder decision §0.2)
+  google_fonts: ^6.2.1            # Fraunces + Inter served via GFonts
+  dio: ^5.7.0                     # HTTP client (Day 4)
+  flutter_secure_storage: ^9.2.2  # Session-token storage (Day 4)
+  intl: ^0.19.0                   # Date formatting for DOB / timestamps
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

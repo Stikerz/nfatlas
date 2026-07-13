@@ -1,0 +1,61 @@
+/*
+ * Atlas design tokens as CSS custom properties.
+ * Values traced to _bmad-output/planning-artifacts/design/tokens.md.
+ * Tailwind theme extension is the primary consumer; these are for raw CSS
+ * escape hatches (embedded SVG, third-party components) only.
+ */
+
+:root {
+  /* ── Brand ──────────────────────────────────────────────────────────── */
+  --atlas-color-brand-primary: #0F1E38;
+  --atlas-color-brand-accent: #C9A96A;
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  --atlas-color-text-primary: #1A1A1A;
+  --atlas-color-text-secondary: #5F5A54;
+  --atlas-color-text-inverted: #FAF7F2;
+  --atlas-color-text-accent: #C9A96A;
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+  --atlas-color-surface-base: #FAF7F2;
+  --atlas-color-surface-elevated: #F2EDE4;
+  --atlas-color-surface-inverted: #0F1E38;
+  --atlas-color-surface-subtle: #F7F3EC;
+
+  /* ── State ──────────────────────────────────────────────────────────── */
+  --atlas-color-state-success: #1E5F4C;
+  --atlas-color-state-attention: #B87728;
+  --atlas-color-state-danger: #A94A38;
+  --atlas-color-state-info: #0F1E38;
+
+  /* ── Structural ─────────────────────────────────────────────────────── */
+  --atlas-color-divider-hairline: #E5DFD6;
+  --atlas-color-divider-strong: #C9C3B7;
+  --atlas-color-focus-ring: #0F1E38;
+
+  /* ── Spacing ────────────────────────────────────────────────────────── */
+  --atlas-space-0: 0;
+  --atlas-space-50: 2px;
+  --atlas-space-100: 4px;
+  --atlas-space-200: 8px;
+  --atlas-space-300: 12px;
+  --atlas-space-400: 16px;
+  --atlas-space-500: 20px;
+  --atlas-space-600: 24px;
+  --atlas-space-800: 32px;
+  --atlas-space-1200: 48px;
+  --atlas-space-1600: 64px;
+  --atlas-space-2400: 96px;
+
+  /* ── Radius ─────────────────────────────────────────────────────────── */
+  --atlas-radius-none: 0;
+  --atlas-radius-small: 4px;
+  --atlas-radius-medium: 8px;
+  --atlas-radius-large: 12px;
+  --atlas-radius-pill: 9999px;
+
+  /* ── Elevation ──────────────────────────────────────────────────────── */
+  --atlas-elevation-0: none;
+  --atlas-elevation-1: 0 1px 2px rgba(60, 45, 30, 0.06), 0 2px 8px rgba(60, 45, 30, 0.04);
+  --atlas-elevation-2: 0 4px 12px rgba(60, 45, 30, 0.08), 0 12px 32px rgba(60, 45, 30, 0.06);
+}

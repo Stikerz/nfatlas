@@ -1,0 +1,14 @@
+@import '../design/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  background: var(--atlas-color-surface-base);
+  color: var(--atlas-color-text-primary);
+}
+
+*:focus-visible {
+  outline: 2px solid var(--atlas-color-focus-ring);
+  outline-offset: 3px;
+}
