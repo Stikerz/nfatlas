@@ -19,6 +19,22 @@ build/
 .turbo/
 *.tsbuildinfo
 
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+mobile/build/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/**/GeneratedPluginRegistrant.*
+mobile/**/*.g.dart
+mobile/**/*.freezed.dart
+
 # Python
 __pycache__/
 *.pyc

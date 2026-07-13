@@ -1,0 +1,116 @@
+# Atlas V0.5 local dev stack.
+# Five services + hard-gate healthchecks. Cold-start target: <60s aspirational,
+# 90s hard-fail (per week-3-build-plan.md §0 decision 5).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: atlas-postgres
+    environment:
+      POSTGRES_USER: ${ATLAS_POSTGRES_USER:-atlas}
+      POSTGRES_PASSWORD: ${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}
+      POSTGRES_DB: ${ATLAS_POSTGRES_DB:-atlas}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ATLAS_POSTGRES_USER:-atlas} -d ${ATLAS_POSTGRES_DB:-atlas}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7-alpine
+    container_name: atlas-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+
+  mailhog:
+    # OTP delivery target for V0.5 (per week-3-build-plan §1 "Out").
+    # SMTP :1025 for the backend; HTTP :8025 for founder to read OTPs.
+    image: mailhog/mailhog:v1.0.1
+    container_name: atlas-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8025/api/v2/messages"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.backend
+    container_name: atlas-backend
+    environment:
+      ATLAS_ENV: dev
+      ATLAS_DATABASE_URL: postgresql+asyncpg://${ATLAS_POSTGRES_USER:-atlas}:${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/${ATLAS_POSTGRES_DB:-atlas}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2); sys.exit(0)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    container_name: atlas-worker
+    environment:
+      ATLAS_ENV: dev
+      ATLAS_DATABASE_URL: postgresql+asyncpg://${ATLAS_POSTGRES_USER:-atlas}:${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/${ATLAS_POSTGRES_DB:-atlas}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  admin:
+    image: node:20-alpine
+    container_name: atlas-admin
+    working_dir: /app
+    command: sh -c "corepack enable && pnpm install --frozen-lockfile && pnpm dev"
+    environment:
+      NEXT_TELEMETRY_DISABLED: "1"
+    volumes:
+      - ./admin:/app
+      - admin_node_modules:/app/node_modules
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:3000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 45s
+
+volumes:
+  postgres_data:
+  admin_node_modules:
