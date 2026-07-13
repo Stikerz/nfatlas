@@ -1,7 +1,8 @@
-"""Async SQLAlchemy engine + session factory.
+"""Async SQLAlchemy engine + session factory + shared DeclarativeBase.
 
 One engine per process; sessions obtained via `get_session()` dependency.
-No ORM models declared here — each module owns its own `models.py`.
+Each module owns its own `models.py` and subclasses `Base` from here so a
+single MetaData covers Alembic autogenerate.
 """
 
 from __future__ import annotations
@@ -9,9 +10,25 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from functools import lru_cache
 
+from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
 from atlas.config import get_settings
+
+# Naming convention chosen so Alembic-generated names are stable across engines
+# and don't drift into anonymous / random suffixes. Standard SQLAlchemy recipe.
+_NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "ck": "ck_%(table_name)s_%(constraint_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
+
+
+class Base(DeclarativeBase):
+    metadata = MetaData(naming_convention=_NAMING_CONVENTION)
 
 
 @lru_cache(maxsize=1)

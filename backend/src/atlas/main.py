@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from atlas import __version__
 from atlas.config import get_settings
+from atlas.identity.routes import router as identity_router
 
 app = FastAPI(
     title="Atlas Backend",
@@ -21,3 +22,6 @@ app = FastAPI(
 @app.get("/healthz", tags=["meta"])
 async def healthz() -> dict[str, str]:
     return {"status": "ok", "version": __version__}
+
+
+app.include_router(identity_router)

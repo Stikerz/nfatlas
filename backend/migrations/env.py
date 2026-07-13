@@ -16,13 +16,20 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from atlas.config import get_settings
+from atlas.db import Base
+
+# Import model modules so their tables register on Base.metadata before
+# Alembic autogenerate reflects.
+from atlas.audit_log import models as _audit_log_models  # noqa: F401
+from atlas.identity import models as _identity_models  # noqa: F401
+from atlas.idempotency import models as _idempotency_models  # noqa: F401
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = None  # Day 2: set to combined MetaData across modules.
+target_metadata = Base.metadata
 
 config.set_main_option(
     "sqlalchemy.url",
