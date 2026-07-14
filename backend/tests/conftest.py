@@ -29,6 +29,7 @@ _TRUNCATE_TABLES = (
     "idempotency_records",
     "sessions",
     "otps",
+    "user_roles",
     "users",
 )
 

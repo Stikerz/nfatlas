@@ -77,5 +77,8 @@ class SessionCreateResponse(BaseModel):
 class SessionCurrentResponse(BaseModel):
     session_id: uuid.UUID
     user_id: uuid.UUID
+    email: str
     issued_at: datetime
     expires_at: datetime
+    roles: list[str] = Field(default_factory=list)
+    is_admin: bool = False

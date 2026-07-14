@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from atlas.admin import service as admin_service
 from atlas.db import get_session
 from atlas.identity import (
     mailhog_sender,
@@ -16,7 +17,7 @@ from atlas.identity import (
     session_service,
 )
 from atlas.identity.auth import current_session
-from atlas.identity.models import Session as SessionRow
+from atlas.identity.models import Session as SessionRow, User
 from atlas.identity.schemas import (
     OTPIssueRequest,
     OTPIssueResponse,
@@ -211,11 +212,18 @@ async def logout(
     response_model=SessionCurrentResponse,
 )
 async def get_current_session(
+    db: AsyncSession = Depends(get_session),
     session: SessionRow = Depends(current_session),
 ) -> SessionCurrentResponse:
+    user = await db.get(User, session.user_id)
+    assert user is not None  # active session implies existing user
+    roles = await admin_service.roles_for(db, user_id=session.user_id)
     return SessionCurrentResponse(
         session_id=session.id,
         user_id=session.user_id,
+        email=user.email,
         issued_at=session.issued_at,
         expires_at=session.expires_at,
+        roles=roles,
+        is_admin=admin_service.SUPERADMIN_ROLE in roles,
     )
