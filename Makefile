@@ -1,4 +1,4 @@
-.PHONY: help setup dev test lint typecheck demo-reset clean
+.PHONY: help setup dev test lint typecheck demo-reset bootstrap clean
 
 help:
 	@echo "Atlas V0.5 — dev commands"
@@ -9,6 +9,7 @@ help:
 	@echo "  make lint          Ruff + ESLint + Flutter analyze"
 	@echo "  make typecheck     mypy + tsc"
 	@echo "  make demo-reset    Wipe DB volume and reseed identity slice"
+	@echo "  make bootstrap     Create the seeded superadmin (Adaobi Ibe)"
 	@echo "  make clean         Stop stack, remove volumes"
 
 setup:
@@ -37,7 +38,10 @@ demo-reset:
 	@echo "→ waiting for postgres to become healthy…"
 	@until docker compose exec -T postgres pg_isready -U atlas -d atlas >/dev/null 2>&1; do sleep 1; done
 	docker compose run --rm backend alembic -c migrations/alembic.ini upgrade head
-	@echo "→ demo-reset done (identity slice migrations applied)"
+	@echo "→ demo-reset done (identity + RBAC migrations applied)"
+
+bootstrap:
+	docker compose run --rm backend python /infrastructure/scripts/bootstrap_superadmin.py
 
 clean:
 	docker compose down -v

@@ -19,6 +19,29 @@ make dev       # docker compose up (postgres, redis, mailhog, backend, worker, a
 
 Expected: cold-start `<60s` aspirational, `<90s` hard gate (per `_bmad-output/implementation-artifacts/week-3-build-plan.md §0.5`).
 
+### Bootstrap the seeded operator (once per environment)
+
+```bash
+# 1. Set a real superadmin password in .env (>= 12 chars)
+export ATLAS_SUPERADMIN_PASSWORD=$(openssl rand -base64 24)
+make bootstrap    # seeds Adaobi Ibe with the superadmin role
+```
+
+Runbook: [`docs/runbooks/superadmin-bootstrap.md`](docs/runbooks/superadmin-bootstrap.md).
+
+### Fresh-clone verification checklist (Week 3 gate, plan §6)
+
+Run this on a second machine (borrowed laptop or Codespace) after `make dev` + `make bootstrap`:
+
+- [ ] `curl localhost:8000/healthz` → `{"status":"ok",...}`
+- [ ] Open http://localhost:8000/docs — Swagger renders 7 identity endpoints.
+- [ ] Open http://localhost:3000 — redirects to /login (wf-08 renders).
+- [ ] Sign in with the seeded superadmin credentials → land at /admin dashboard.
+- [ ] Open the Flutter app on an iOS simulator (`cd mobile && flutter run`) — register → OTP (grab from http://localhost:8025 Mailhog) → password → welcome → home.
+- [ ] `docker compose logs backend | grep 'user.registered'` — audit event visible.
+- [ ] `SELECT count(*) FROM audit_log WHERE prev_hash != 'GENESIS'` — chain intact.
+- [ ] Total wall-clock from `git clone` to green checklist: **< 15 min** (target), **< 20 min** (hard).
+
 **Verify healthy stack:**
 
 | URL                          | What it is                                     |

@@ -61,6 +61,10 @@ services:
       ATLAS_SESSION_TTL_HOURS: ${ATLAS_SESSION_TTL_HOURS:-8}
       ATLAS_MAILHOG_HOST: mailhog
       ATLAS_MAILHOG_PORT: "1025"
+      ATLAS_SUPERADMIN_EMAIL: ${ATLAS_SUPERADMIN_EMAIL:-adaobi.ibe@atlas.dev}
+      ATLAS_SUPERADMIN_PASSWORD: ${ATLAS_SUPERADMIN_PASSWORD:-dev_bootstrap_password_change_me_00}
+    volumes:
+      - ./infrastructure:/infrastructure:ro
     ports:
       - "8000:8000"
     depends_on:
