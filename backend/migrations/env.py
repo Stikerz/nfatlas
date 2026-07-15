@@ -24,6 +24,7 @@ from atlas.audit_log import models as _audit_log_models  # noqa: F401
 from atlas.identity import models as _identity_models  # noqa: F401
 from atlas.idempotency import models as _idempotency_models  # noqa: F401
 from atlas.admin import models as _admin_models  # noqa: F401
+from atlas.wallet import models as _wallet_models  # noqa: F401
 
 config = context.config
 

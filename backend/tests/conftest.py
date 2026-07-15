@@ -27,10 +27,20 @@ from atlas.main import app
 _TRUNCATE_TABLES = (
     "audit_log",
     "idempotency_records",
+    "ledger_entries",
     "sessions",
     "otps",
     "user_roles",
     "users",
+)
+
+# Rows added per-test into ledger_accounts (user_wallet, prize_pool) are wiped;
+# the 4 operator-level singletons seeded by migration 0004 stay put.
+_LEDGER_ACCOUNTS_KEEP_TYPES = (
+    "operator_revenue",
+    "refund_payable",
+    "payment_gateway_clearing",
+    "tax_payable",
 )
 
 
@@ -65,6 +75,10 @@ async def db_session(db_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
                 f"TRUNCATE TABLE {', '.join(_TRUNCATE_TABLES)} "
                 "RESTART IDENTITY CASCADE"
             )
+        )
+        keep = ", ".join(f"'{t}'" for t in _LEDGER_ACCOUNTS_KEEP_TYPES)
+        await conn.execute(
+            text(f"DELETE FROM ledger_accounts WHERE account_type NOT IN ({keep})")
         )
 
 

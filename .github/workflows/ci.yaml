@@ -130,3 +130,28 @@ jobs:
             echo "::error::env-var reads must live in atlas.config"
             exit 1
           fi
+      - name: LedgerEntry references outside atlas.wallet (ADR-003)
+        run: |
+          set -e
+          # LedgerEntry (the ORM class) is the only symbol that maps to
+          # ledger_entries rows. Its INSERT sites must live in wallet/ledger.py;
+          # allowing any read/write elsewhere would let a caller bypass
+          # post_transaction and skip the balance trigger's guarantee.
+          if grep -rn 'LedgerEntry' backend/src/atlas \
+              --include='*.py' \
+              --exclude-dir=wallet ; then
+            echo "::error::LedgerEntry writes must go through atlas.wallet.ledger.post_transaction"
+            exit 1
+          fi
+      - name: no mutable balance column (ADR-003 §Invariants 1)
+        run: |
+          set -e
+          # Any migration or ORM that adds a `balance` column to a users-
+          # or-accounts-shaped table violates the "no mutable balance" rule.
+          # balance_of() is a function name, not a column — safe.
+          if grep -rnE "(add_column|Column|column).*['\"]balance['\"]" \
+              backend/migrations backend/src/atlas \
+              --include='*.py' ; then
+            echo "::error::ledger has no mutable balance column (ADR-003 §Invariants 1)"
+            exit 1
+          fi
