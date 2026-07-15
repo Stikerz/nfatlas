@@ -16,7 +16,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -54,6 +54,21 @@ class Settings(BaseSettings):
     # --- Dev-only OTP delivery (Mailhog SMTP stub for real SMS) -----------
     mailhog_host: str = "mailhog"
     mailhog_port: int = 1025
+
+    # --- Wallet (V0.5) ----------------------------------------------------
+    # Founder decision 2026-07-15 §0.4: lets Week 4 tests exercise
+    # record_ticket_purchase against a placeholder draw_id before the ticket
+    # module lands Week 5. Production must set this to false.
+    wallet_allow_stub_draw: bool = True
+
+    @model_validator(mode="after")
+    def _prod_safety(self) -> "Settings":
+        if self.env == "production" and self.wallet_allow_stub_draw:
+            raise ValueError(
+                "ATLAS_WALLET_ALLOW_STUB_DRAW must be false in production "
+                "(V0.5 stub for the pre-ticket-module weeks only)."
+            )
+        return self
 
     # --- Placeholders for later weeks -------------------------------------
     paystack_secret_key: SecretStr | None = None
