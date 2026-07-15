@@ -2,9 +2,25 @@
 
 **Drafted:** 2026-07-14 (Week 3 close; Week 4 kickoff on founder sign-off)
 **Drafted by:** 💻 Amelia (BMad Dev)
-**Status:** **Draft** — pending founder sign-off on §11 asks before Day 1 code starts.
+**Status:** **Approved 2026-07-15** — founder resolved all §9 asks; ready to start Day 1 Monday.
 **Applies to:** V0.5 investor demo; Wallet + Payment slices of the flagship flow.
 **Pairs with:** `v0.5-demo-plan.md §5 Week 4`, `week-3-build-plan.md` (foundation), `docs/adr/ADR-{002,003,004,008}.md`, `_bmad-output/planning-artifacts/design/wireframes/{04,09,10,13}.md`.
+
+---
+
+## 0. Founder decisions (2026-07-15)
+
+Resolves §9 asks. Applied throughout the plan below.
+
+| # | Ask | Decision | Impact |
+|---|---|---|---|
+| 1 | Paystack sandbox credentials | **Stub Paystack entirely for Week 4** | No real HTTP calls to Paystack; Day 3 adapter runs against captured fixture responses (`backend/tests/payment/fixtures/paystack/*.json`). Day 4 webhook exercises the real HMAC-SHA-512 path against a locally-generated signature using a test webhook secret. Real credentials + live sandbox round-trip land Week 5 when the mobile ticket-purchase UI needs a real checkout URL — deferred as a Week 5 blocking prereq for founder. |
+| 2 | Fee-handling shape | **Trust Paystack's response `fees` field** | Fee amount comes from the vendor response payload, not a hardcoded schedule. Fixture files include representative `fees` values (₦100 flat below ₦2,500; 1.5% + ₦100 above; capped at ₦2,000). Adapter surfaces the fee on `PaymentResult`; `record_deposit` posts it as a separate ledger entry per ADR-008 §Fee handling. |
+| 3 | Outbox pattern (ADR-002) | **Direct call in Week 4; outbox refactor Week 6+** | Paystack webhook handler calls `wallet.service.record_deposit` synchronously in the same DB transaction. Documented debt in commit + `docs/adr/ADR-002-outbox-pattern-for-async-work.md` (Amelia adds an Amendment section noting the V0.5 deferral). Full outbox lands Week 6 with the draw-engine module which genuinely needs async fan-out. |
+| 4 | `WALLET_ALLOW_STUB_DRAW` flag | **Yes, flag + stub** | Week 4 posts ticket-purchase transactions to a placeholder `prize_pool` account keyed on a string `draw_id`. Flag default `true` in `atlas.config` under `ATLAS_WALLET_ALLOW_STUB_DRAW`; must be `false` in prod. Startup check refuses to boot with flag `true` when `ATLAS_ENV=production`. Week 5 flips the flag off as ticket module lands and real draws exist. |
+| 5 | Idempotency-key retry semantics | **ADR-004 verbatim** | Same key + same body → return cached response verbatim; same key + different body → 409 Conflict. Matches identity module + ADR-004 §Processing step 2. No payment-specific override. |
+
+Adaeze's items in §5 (audit-payload redaction, fee-split accounting posture) still owed by Day 4.
 
 ---
 
@@ -68,21 +84,22 @@ Each day ends demoable to founder over Zoom in < 3 minutes.
 
 **Demoable EOD:** shell script that runs 3 deposits, 2 ticket purchases, 1 prize award on a demo user; final `balance_of(user_wallet) == expected`, audit-log chain intact.
 
-### Day 3 (Wed) — Payment intents + Paystack adapter
+### Day 3 (Wed) — Payment intents + Paystack adapter (stubbed per §0.1)
 
 - `backend/migrations/versions/0005_payment_intents.py` — `payment_intents` (id, user_id, amount_minor, currency, method, status, vendor_reference, checkout_url, idempotency_key UNIQUE, metadata, created_at, updated_at). State enum per ADR-008.
 - `atlas.payment.providers.protocol.py` per ADR-008 §Protocol surface — `PaymentProvider` protocol + `PaymentIntent` / `PaymentResult` / `WebhookEvent` dataclasses + enums.
-- `atlas.payment.providers.paystack.py` — implements the protocol against Paystack's `POST /transaction/initialize` sandbox endpoint. `raw_response_redacted` strips `card`, `authorization`, `customer.metadata` before persistence. HTTP client is `httpx.AsyncClient` with 10s timeout.
+- `atlas.payment.providers.paystack.py` — implements the protocol. Real HTTP surface **wired but disabled** (`ATLAS_PAYSTACK_STUB_MODE=true` in V0.5 default; adapter short-circuits to fixture responses). Real HTTP-call code path exercised only by contract tests using `pytest-httpx` mocks — no live sandbox round-trip in Week 4 per §0.1.
+- `atlas.payment.providers.paystack_fixtures.py` — deterministic fixture responses for `initialize`, `charge.success`, `charge.failed` derived from Paystack's published example payloads. Fixture `checkout_url` is `http://mock-paystack.local/checkout/{ref}` so callers see it's a stub.
 - `atlas.payment.service`:
-  - `create_intent(session, *, user_id, amount_minor, method, description, idempotency_key)` — persists the `payment_intents` row, calls provider, updates row with `vendor_reference` + `checkout_url`, emits `payment.intent_created` audit event.
+  - `create_intent(session, *, user_id, amount_minor, method, description, idempotency_key)` — persists the `payment_intents` row, calls provider (returns fixture response in stub mode), updates row with `vendor_reference` + `checkout_url`, emits `payment.intent_created` audit event.
 - `atlas.payment.routes`:
   - `POST /api/v1/payments/intents` — Idempotency-Key required. Returns `{payment_intent_id, checkout_url, expires_at}`.
-- `atlas.config` gets `paystack_secret_key: SecretStr` (required), `paystack_public_key: str`, `paystack_webhook_secret: SecretStr` (required). Dev defaults in compose = the Paystack test-mode values founder provides in §11.
+- `atlas.config` gets `paystack_secret_key: SecretStr | None` (optional in stub mode), `paystack_public_key: str | None`, `paystack_webhook_secret: SecretStr` (required — the HMAC path exercises this even in stub mode via signed test webhooks), `paystack_stub_mode: bool` (default true in V0.5).
 - Tests:
-  - `tests/payment/test_paystack_adapter.py` — HTTP boundary stubbed with respx or pytest-httpx; verifies request shape (auth header, JSON body) and response parsing.
+  - `tests/payment/test_paystack_adapter.py` — stub-mode path returns fixture; live-mode path (with mocked HTTP via `pytest-httpx`) verifies request shape (auth header, JSON body) and response parsing.
   - `tests/payment/test_intent_endpoint.py` — creates intent → 201 with expected shape; idempotent replay returns cached response.
 
-**Demoable EOD:** `curl -X POST http://localhost:8000/api/v1/payments/intents -H 'Idempotency-Key: {uuid}' -H 'Authorization: Bearer {session}' -d '{"amount_minor": 500000, "method": "card"}'` returns 201 with a real Paystack sandbox `checkout_url` you can open in a browser.
+**Demoable EOD:** `curl -X POST http://localhost:8000/api/v1/payments/intents -H 'Idempotency-Key: {uuid}' -H 'Authorization: Bearer {session}' -d '{"amount_minor": 500000, "method": "card"}'` returns 201 with a mock `checkout_url` (real sandbox URL comes Week 5 when founder provisions the sandbox account).
 
 ### Day 4 (Thu) — Paystack webhook + wallet credit
 
@@ -100,7 +117,7 @@ Each day ends demoable to founder over Zoom in < 3 minutes.
   - `charge.failed` webhook → payment_intent failed, no ledger entries.
 - Recon skeleton: `atlas.payment.jobs.reconcile.py` — stub with `TODO(week-6)` markers around the fetch call; unit test the diffing helper (given fake settlement report + ledger sum, computes diff).
 
-**Demoable EOD:** feed a signed test webhook body via `curl` → observe `SELECT balance_of user_wallet` increase by the deposited amount, minus the fee visible as a separate entry.
+**Demoable EOD:** feed a signed test webhook body via `curl` (signed with the local `ATLAS_PAYSTACK_WEBHOOK_SECRET` using a small helper script `infrastructure/scripts/sign_paystack_webhook.py`) → observe `SELECT balance_of(user_wallet)` increase by the deposited amount, with the fee visible as a separate entry.
 
 ### Day 5 (Fri) — E2E flow + hardening
 
@@ -245,19 +262,15 @@ Not a Week 4 risk but a Week 5 blocker: Ticket module depends on wallet.record_t
 
 ## 9. Asks to founder before Day 1 code starts
 
-Five decisions. All small; sign-off on all five unblocks Day 1 morning.
+**All 5 resolved 2026-07-15 — see §0.** Preserved below as historical record.
 
-1. **Paystack sandbox credentials.** Founder creates the test-mode account at https://dashboard.paystack.com/#/signup, generates test keys, sets `ATLAS_PAYSTACK_SECRET_KEY` + `ATLAS_PAYSTACK_PUBLIC_KEY` + `ATLAS_PAYSTACK_WEBHOOK_SECRET` in local `.env` (never committed). Confirm this can happen before Day 3.
+1. **Paystack sandbox credentials.** → **Stub Paystack entirely for Week 4.** Real credentials + live sandbox round-trip deferred to Week 5 as a blocking prereq for founder.
+2. **Fee handling shape.** → **Trust Paystack's response `fees` field.**
+3. **Outbox pattern deferral.** → **Direct call in Week 4; ADR-002 outbox refactor Week 6+.**
+4. **`WALLET_ALLOW_STUB_DRAW` flag.** → **Yes, flag + stub.** Startup check refuses `true` in production.
+5. **Idempotency-key semantics on payment retry.** → **ADR-004 verbatim.**
 
-2. **Fee handling shape.** Paystack test-mode returns fee in the response payload. Options: (a) trust the response's `fees` field per transaction (dynamic, correct); (b) hardcode 1.5% + ₦100 cap in `atlas.config` (predictable, drifts if Paystack changes). Recommend (a) — the response is authoritative and doesn't cost a config maintenance burden. Confirm.
-
-3. **Outbox pattern deferral.** ADR-002 mandates outbox for cross-module async work. For Week 4, the payment webhook handler will call `wallet.service.record_deposit` directly, in the same transaction. Full outbox refactor lands Week 6+ as documented debt. Confirm (a) direct-call in Week 4 or (b) full outbox now (adds a day, delays payment demo).
-
-4. **`WALLET_ALLOW_STUB_DRAW` flag.** Week 4 needs to post ticket-purchase transactions to a placeholder `prize_pool` account before the draw module exists (Week 5). Flag default: true in V0.5, false in prod. Alternative: skip `record_ticket_purchase` entirely in Week 4 and land it Week 5 alongside the ticket module. Recommend flag approach — lets Week 4 tests exercise the full transaction shape. Confirm.
-
-5. **Idempotency-key semantics on payment retry.** ADR-004 §Processing step 2: reused key + different body = 409 Conflict. Applied here means a user who taps "Pay" twice with the same key but different amount gets 409. Recommend confirm (matches ADR-004 verbatim; the client SDK regenerates the key on genuine retry).
-
-Adaeze's items in §5 (wallet + payment audit payload redaction, fee-split accounting posture) can arrive by Day 4 without pushing timelines.
+Adaeze's items in §5 (wallet + payment audit payload redaction, fee-split accounting posture) still owed by Day 4.
 
 ---
 
