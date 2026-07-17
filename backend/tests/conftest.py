@@ -28,6 +28,7 @@ _TRUNCATE_TABLES = (
     "audit_log",
     "idempotency_records",
     "ledger_entries",
+    "payment_intents",
     "sessions",
     "otps",
     "user_roles",

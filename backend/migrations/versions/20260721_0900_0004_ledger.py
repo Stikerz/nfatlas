@@ -57,6 +57,7 @@ def upgrade() -> None:
     )
 
     # ── ledger_entries ───────────────────────────────────────────────────
+    # One statement per op.execute — asyncpg cannot prepare multi-stmt SQL.
     op.execute(
         """
         CREATE TABLE ledger_entries (
@@ -76,14 +77,20 @@ def upgrade() -> None:
             CONSTRAINT ck_ledger_entries_amount_positive
                 CHECK (amount_minor > 0)
         );
-        CREATE INDEX ix_ledger_entries_account_posted
-            ON ledger_entries (account_id, posted_at);
-        CREATE INDEX ix_ledger_entries_transaction
-            ON ledger_entries (transaction_id);
-        CREATE UNIQUE INDEX uq_ledger_entries_idempotency
-            ON ledger_entries (idempotency_key)
-            WHERE idempotency_key IS NOT NULL;
         """
+    )
+    op.execute(
+        "CREATE INDEX ix_ledger_entries_account_posted "
+        "ON ledger_entries (account_id, posted_at);"
+    )
+    op.execute(
+        "CREATE INDEX ix_ledger_entries_transaction "
+        "ON ledger_entries (transaction_id);"
+    )
+    op.execute(
+        "CREATE UNIQUE INDEX uq_ledger_entries_idempotency "
+        "ON ledger_entries (idempotency_key) "
+        "WHERE idempotency_key IS NOT NULL;"
     )
 
     # ── Deferred balance-check constraint trigger ────────────────────────

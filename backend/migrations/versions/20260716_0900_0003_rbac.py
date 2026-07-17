@@ -61,9 +61,9 @@ def upgrade() -> None:
             granted_by  UUID,
             PRIMARY KEY (user_id, role_code)
         );
-        CREATE INDEX ix_user_roles_role_code ON user_roles (role_code);
         """
     )
+    op.execute("CREATE INDEX ix_user_roles_role_code ON user_roles (role_code);")
     op.execute(
         """
         INSERT INTO roles (code, description) VALUES

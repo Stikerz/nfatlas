@@ -11,7 +11,7 @@ import uuid
 
 import pytest
 from sqlalchemy import select, text
-from sqlalchemy.exc import IntegrityError, InternalError
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.wallet.ledger import (
@@ -135,7 +135,9 @@ async def test_deferred_trigger_rejects_direct_unbalanced_insert(
         {"tx": str(tx_id), "acct": str(a)},
     )
 
-    with pytest.raises((IntegrityError, InternalError)) as exc_info:
+    # asyncpg surfaces the plpgsql RAISE as a generic DBAPIError; the message
+    # carries the trigger's "unbalanced" text either way.
+    with pytest.raises(DBAPIError) as exc_info:
         await db_session.commit()
 
     assert "unbalanced" in str(exc_info.value).lower()

@@ -123,6 +123,7 @@ def upgrade() -> None:
     op.execute("REVOKE UPDATE, DELETE ON audit_log FROM PUBLIC;")
 
     # ── idempotency_records ──────────────────────────────────────────────
+    # One statement per op.execute — asyncpg cannot prepare multi-stmt SQL.
     op.execute(
         """
         CREATE TABLE idempotency_records (
@@ -135,9 +136,11 @@ def upgrade() -> None:
             created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
             completed_at  TIMESTAMPTZ
         );
-        CREATE INDEX ix_idempotency_records_created_at
-            ON idempotency_records (created_at);
         """
+    )
+    op.execute(
+        "CREATE INDEX ix_idempotency_records_created_at "
+        "ON idempotency_records (created_at);"
     )
 
 

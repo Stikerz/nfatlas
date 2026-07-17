@@ -10,6 +10,7 @@ from fastapi import FastAPI
 from atlas import __version__
 from atlas.config import get_settings
 from atlas.identity.routes import router as identity_router
+from atlas.payment.routes import router as payment_router
 
 app = FastAPI(
     title="Atlas Backend",
@@ -25,3 +26,4 @@ async def healthz() -> dict[str, str]:
 
 
 app.include_router(identity_router)
+app.include_router(payment_router)

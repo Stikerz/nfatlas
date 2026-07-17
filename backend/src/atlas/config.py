@@ -61,17 +61,47 @@ class Settings(BaseSettings):
     # module lands Week 5. Production must set this to false.
     wallet_allow_stub_draw: bool = True
 
+    # --- Payment / Paystack (V0.5 Week 4) ---------------------------------
+    # Founder decision 2026-07-15 §0.1: Paystack fully stubbed for Week 4.
+    # `paystack_stub_mode = true` short-circuits the adapter to fixture
+    # responses. Production must set this to false (validated below).
+    # `paystack_secret_key` + `paystack_public_key` are optional in stub
+    # mode; required when stub_mode is off.
+    # `paystack_webhook_secret` is required always — Day 4 exercises the
+    # real HMAC-SHA-512 path even with the API side stubbed.
+    paystack_stub_mode: bool = True
+    paystack_secret_key: SecretStr | None = None
+    paystack_public_key: str | None = None
+    paystack_webhook_secret: SecretStr = Field(
+        description="HMAC-SHA-512 secret for x-paystack-signature verification.",
+        min_length=16,
+    )
+
     @model_validator(mode="after")
     def _prod_safety(self) -> "Settings":
-        if self.env == "production" and self.wallet_allow_stub_draw:
+        if self.env == "production":
+            if self.wallet_allow_stub_draw:
+                raise ValueError(
+                    "ATLAS_WALLET_ALLOW_STUB_DRAW must be false in production "
+                    "(V0.5 stub for the pre-ticket-module weeks only)."
+                )
+            if self.paystack_stub_mode:
+                raise ValueError(
+                    "ATLAS_PAYSTACK_STUB_MODE must be false in production "
+                    "(V0.5 stub for the pre-live-sandbox weeks only)."
+                )
+            if self.paystack_secret_key is None or self.paystack_public_key is None:
+                raise ValueError(
+                    "ATLAS_PAYSTACK_SECRET_KEY and ATLAS_PAYSTACK_PUBLIC_KEY "
+                    "are required when stub mode is off."
+                )
+        if not self.paystack_stub_mode and self.paystack_secret_key is None:
             raise ValueError(
-                "ATLAS_WALLET_ALLOW_STUB_DRAW must be false in production "
-                "(V0.5 stub for the pre-ticket-module weeks only)."
+                "ATLAS_PAYSTACK_SECRET_KEY is required when stub mode is off."
             )
         return self
 
     # --- Placeholders for later weeks -------------------------------------
-    paystack_secret_key: SecretStr | None = None
     bvn_pepper: SecretStr | None = None  # ADR-010: never rotated
     sentry_dsn: SecretStr | None = None
 
@@ -82,4 +112,4 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     """Cached settings instance. Reload requires process restart (ADR-012)."""
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

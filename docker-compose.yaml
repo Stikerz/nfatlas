@@ -63,6 +63,10 @@ services:
       ATLAS_MAILHOG_PORT: "1025"
       ATLAS_SUPERADMIN_EMAIL: ${ATLAS_SUPERADMIN_EMAIL:-adaobi.ibe@atlas.dev}
       ATLAS_SUPERADMIN_PASSWORD: ${ATLAS_SUPERADMIN_PASSWORD:-dev_bootstrap_password_change_me_00}
+      ATLAS_PAYSTACK_STUB_MODE: ${ATLAS_PAYSTACK_STUB_MODE:-true}
+      ATLAS_PAYSTACK_SECRET_KEY: ${ATLAS_PAYSTACK_SECRET_KEY:-}
+      ATLAS_PAYSTACK_PUBLIC_KEY: ${ATLAS_PAYSTACK_PUBLIC_KEY:-}
+      ATLAS_PAYSTACK_WEBHOOK_SECRET: ${ATLAS_PAYSTACK_WEBHOOK_SECRET:-dev_paystack_webhook_secret_do_not_use_in_prod_00}
     volumes:
       - ./infrastructure:/infrastructure:ro
     ports:
@@ -92,6 +96,10 @@ services:
       ATLAS_JWT_SIGNING_KEY: ${ATLAS_JWT_SIGNING_KEY:-dev_jwt_signing_key_do_not_use_in_prod_00000000}
       ATLAS_OTP_PEPPER: ${ATLAS_OTP_PEPPER:-dev_otp_pepper_do_not_use_in_prod_0000000000000000}
       ATLAS_SESSION_TTL_HOURS: ${ATLAS_SESSION_TTL_HOURS:-8}
+      ATLAS_PAYSTACK_STUB_MODE: ${ATLAS_PAYSTACK_STUB_MODE:-true}
+      ATLAS_PAYSTACK_SECRET_KEY: ${ATLAS_PAYSTACK_SECRET_KEY:-}
+      ATLAS_PAYSTACK_PUBLIC_KEY: ${ATLAS_PAYSTACK_PUBLIC_KEY:-}
+      ATLAS_PAYSTACK_WEBHOOK_SECRET: ${ATLAS_PAYSTACK_WEBHOOK_SECRET:-dev_paystack_webhook_secret_do_not_use_in_prod_00}
     depends_on:
       postgres:
         condition: service_healthy

@@ -25,6 +25,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # One statement per op.execute — asyncpg cannot prepare multi-stmt SQL.
     op.execute(
         """
         CREATE TABLE otps (
@@ -40,12 +41,13 @@ def upgrade() -> None:
             CONSTRAINT ck_otps_channel_enum CHECK (channel IN ('mailhog', 'sms')),
             CONSTRAINT ck_otps_purpose_enum CHECK (purpose IN ('registration', 'login_mfa'))
         );
-        CREATE INDEX ix_otps_user_purpose_active
-            ON otps (user_id, purpose)
-            WHERE consumed_at IS NULL;
-        CREATE INDEX ix_otps_issued_at ON otps (issued_at);
         """
     )
+    op.execute(
+        "CREATE INDEX ix_otps_user_purpose_active "
+        "ON otps (user_id, purpose) WHERE consumed_at IS NULL;"
+    )
+    op.execute("CREATE INDEX ix_otps_issued_at ON otps (issued_at);")
 
     op.execute(
         """
@@ -58,10 +60,11 @@ def upgrade() -> None:
             ip_addr     INET,
             user_agent  TEXT
         );
-        CREATE INDEX ix_sessions_user_active
-            ON sessions (user_id)
-            WHERE revoked_at IS NULL;
         """
+    )
+    op.execute(
+        "CREATE INDEX ix_sessions_user_active "
+        "ON sessions (user_id) WHERE revoked_at IS NULL;"
     )
 
 
