@@ -61,7 +61,7 @@ def _canonical_row_bytes(
     Datetime is serialised as an ISO-8601 UTC string with microsecond
     precision so canonicalization is deterministic across Python versions.
     """
-    row = {
+    row: dict[str, Any] = {
         "seq": seq,
         "occurred_at": occurred_at.astimezone(UTC).isoformat(
             timespec="microseconds"
