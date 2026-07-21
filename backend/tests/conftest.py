@@ -18,7 +18,12 @@ from pathlib import Path
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from atlas.config import get_settings
 from atlas.db import get_session
@@ -48,7 +53,7 @@ _LEDGER_ACCOUNTS_KEEP_TYPES = (
 def pytest_sessionstart(session: pytest.Session) -> None:
     """Bring the DB to head once, before any tests run."""
     backend_root = Path(__file__).resolve().parents[1]
-    subprocess.run(  # noqa: S603 — trusted local invocation
+    subprocess.run(
         ["alembic", "-c", "migrations/alembic.ini", "upgrade", "head"],
         cwd=backend_root,
         check=True,

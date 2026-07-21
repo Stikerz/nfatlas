@@ -7,9 +7,10 @@ manually via docker compose.
 
 from __future__ import annotations
 
+import itertools
 import uuid
-from datetime import date, datetime, timedelta, timezone
-from typing import Iterator
+from collections.abc import Iterator
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -17,8 +18,8 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log.models import AuditLog
-from atlas.identity import mailhog_sender, otp_service
-from atlas.identity.models import OTP, Session as SessionRow, User
+from atlas.identity import mailhog_sender
+from atlas.identity.models import OTP, User
 
 
 @pytest.fixture(autouse=True)
@@ -137,7 +138,7 @@ async def test_otp_expired_returns_400(
     await db_session.execute(
         update(OTP)
         .where(OTP.user_id == user_id)
-        .values(expires_at=datetime.now(timezone.utc) - timedelta(seconds=1))
+        .values(expires_at=datetime.now(UTC) - timedelta(seconds=1))
     )
     await db_session.commit()
 
@@ -250,7 +251,7 @@ async def test_full_register_verify_password_login_flow(
     ]
 
     audit = (await db_session.execute(select(AuditLog).order_by(AuditLog.seq))).scalars().all()
-    for prev, curr in zip(audit, audit[1:], strict=False):
+    for prev, curr in itertools.pairwise(audit):
         assert curr.prev_hash == prev.row_hash
 
 

@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     )
 
     # --- HTTP -------------------------------------------------------------
-    http_host: str = "0.0.0.0"  # noqa: S104 — container-scoped bind, not host-network
+    http_host: str = "0.0.0.0"
     http_port: int = 8000
 
     # --- Identity secrets (required from Day 3) ---------------------------
@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     )
 
     @model_validator(mode="after")
-    def _prod_safety(self) -> "Settings":
+    def _prod_safety(self) -> Settings:
         if self.env == "production":
             if self.wallet_allow_stub_draw:
                 raise ValueError(

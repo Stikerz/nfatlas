@@ -10,7 +10,7 @@ All plan §5 unit-test bullets covered here.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt as pyjwt
 import pytest
@@ -58,7 +58,7 @@ class TestJWT:
     def test_roundtrip(self) -> None:
         session_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=8)
+        expires_at = datetime.now(UTC) + timedelta(hours=8)
         token = session_service._encode_jwt(
             session_id=session_id, user_id=user_id, expires_at=expires_at
         )
@@ -70,7 +70,7 @@ class TestJWT:
     def test_expired_token_rejected(self) -> None:
         session_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        expires_at = datetime.now(timezone.utc) - timedelta(seconds=10)
+        expires_at = datetime.now(UTC) - timedelta(seconds=10)
         token = session_service._encode_jwt(
             session_id=session_id, user_id=user_id, expires_at=expires_at
         )
@@ -80,7 +80,7 @@ class TestJWT:
     def test_tampered_signature_rejected(self) -> None:
         session_id = uuid.uuid4()
         user_id = uuid.uuid4()
-        expires_at = datetime.now(timezone.utc) + timedelta(hours=8)
+        expires_at = datetime.now(UTC) + timedelta(hours=8)
         token = session_service._encode_jwt(
             session_id=session_id, user_id=user_id, expires_at=expires_at
         )

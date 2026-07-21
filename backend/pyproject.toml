@@ -64,6 +64,7 @@ ignore = [
 # a false positive here. Same for the auth.py helper that consumes Depends.
 "src/atlas/**/routes.py" = ["B008"]
 "src/atlas/**/auth.py" = ["B008"]
+"src/atlas/idempotency/dependency.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.13"

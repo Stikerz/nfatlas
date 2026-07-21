@@ -25,7 +25,7 @@ last row (SELECT ... ORDER BY seq DESC LIMIT 1) or the literal `'GENESIS'`.
 from __future__ import annotations
 
 import hashlib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 import rfc8785
@@ -63,7 +63,7 @@ def _canonical_row_bytes(
     """
     row = {
         "seq": seq,
-        "occurred_at": occurred_at.astimezone(timezone.utc).isoformat(
+        "occurred_at": occurred_at.astimezone(UTC).isoformat(
             timespec="microseconds"
         ),
         "actor_type": actor_type,
@@ -135,7 +135,7 @@ async def append(
     seq_result = await session.execute(text("SELECT nextval('audit_log_seq_seq')"))
     seq = int(seq_result.scalar_one())
 
-    occurred = (occurred_at or datetime.now(timezone.utc)).astimezone(timezone.utc)
+    occurred = (occurred_at or datetime.now(UTC)).astimezone(UTC)
 
     row_hash = compute_row_hash(
         seq=seq,

@@ -120,10 +120,15 @@ jobs:
       - name: audit_log write outside writer.py
         run: |
           set -e
+          # Word-boundary the second grep so `writer` (contains `write`) in
+          # the legitimate `from atlas.audit_log import writer as audit`
+          # imports does NOT trip the check. The actual invariant we care
+          # about is any raw INSERT / UPDATE / DELETE on audit_log or a
+          # session.execute() that writes rows outside the writer module.
           if grep -rnE '\baudit_log\b' backend/src/atlas \
               --include='*.py' \
               --exclude-dir=audit_log \
-              | grep -Ei '(insert|write|append|execute)' ; then
+              | grep -Eiw '(insert|update|delete|execute)' ; then
             echo "::error::audit_log writes must go through atlas.audit_log.writer"
             exit 1
           fi

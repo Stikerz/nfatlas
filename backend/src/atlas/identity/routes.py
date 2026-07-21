@@ -9,15 +9,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.db import get_session
+from atlas.idempotency.dependency import IdempotencyGuard, idempotency_guard
 from atlas.identity import (
     mailhog_sender,
     otp_service,
     password_service,
-    service as identity_service,
     session_service,
 )
+from atlas.identity import (
+    service as identity_service,
+)
 from atlas.identity.auth import current_session
-from atlas.identity.models import Session as SessionRow, User
+from atlas.identity.models import Session as SessionRow
+from atlas.identity.models import User
 from atlas.identity.schemas import (
     OTPIssueRequest,
     OTPIssueResponse,
@@ -30,7 +34,6 @@ from atlas.identity.schemas import (
     SessionCreateResponse,
     SessionCurrentResponse,
 )
-from atlas.idempotency.dependency import IdempotencyGuard, idempotency_guard
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
 

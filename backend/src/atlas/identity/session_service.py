@@ -10,7 +10,7 @@ Session refresh + rotation is deferred to V1 (plan §10).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from fastapi import HTTPException, status
@@ -48,7 +48,7 @@ def _encode_jwt(*, session_id: uuid.UUID, user_id: uuid.UUID, expires_at: dateti
         "iss": JWT_ISSUER,
         "sub": str(user_id),
         "jti": str(session_id),
-        "iat": int(datetime.now(timezone.utc).timestamp()),
+        "iat": int(datetime.now(UTC).timestamp()),
         "exp": int(expires_at.timestamp()),
     }
     return jwt.encode(
@@ -88,7 +88,7 @@ async def create(
         raise InvalidCredentials()
 
     settings = get_settings()
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at = now + timedelta(hours=settings.session_ttl_hours)
 
     row = Session(
@@ -127,7 +127,7 @@ async def revoke_current(
         raise SessionInvalid()
     if row.revoked_at is not None:
         return  # idempotent — already revoked
-    row.revoked_at = datetime.now(timezone.utc)
+    row.revoked_at = datetime.now(UTC)
     await db.flush()
 
     await audit.append(
@@ -153,6 +153,6 @@ async def load_active(
         raise SessionInvalid()
     if row.revoked_at is not None:
         raise SessionRevoked()
-    if row.expires_at <= datetime.now(timezone.utc):
+    if row.expires_at <= datetime.now(UTC):
         raise SessionRevoked()
     return row

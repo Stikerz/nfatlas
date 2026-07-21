@@ -23,9 +23,10 @@ In-flight detection uses a 30s window per ADR-004 §Processing step 3.
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import rfc8785
 from fastapi import Depends, Header, Request
@@ -72,7 +73,7 @@ class IdempotencyGuard:
             )
         self._record.response_code = status_code
         self._record.response_body = response_body
-        self._record.completed_at = datetime.now(timezone.utc)
+        self._record.completed_at = datetime.now(UTC)
         await session.flush()
 
 
@@ -119,11 +120,11 @@ def idempotency_guard(*, endpoint: str) -> Callable[..., Any]:
                     cached_status=existing.response_code,
                 )
             # in-flight
-            if datetime.now(timezone.utc) - existing.created_at < IN_FLIGHT_WINDOW:
+            if datetime.now(UTC) - existing.created_at < IN_FLIGHT_WINDOW:
                 raise IdempotencyInFlight()
             # Aged-out in-flight row — treat as stale and overwrite.
             existing.request_hash = request_hash
-            existing.created_at = datetime.now(timezone.utc)
+            existing.created_at = datetime.now(UTC)
             await session.flush()
             return IdempotencyGuard(
                 key=idempotency_key,

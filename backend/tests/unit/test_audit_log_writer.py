@@ -9,14 +9,13 @@ Update this golden ONLY when ADR-005 §Hash chain intentionally changes.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from atlas.audit_log.writer import GENESIS_HASH, _canonical_row_bytes, compute_row_hash
 
-
 _FIXED_ROW = dict(
     seq=1,
-    occurred_at=datetime(2026, 7, 14, 9, 30, 0, tzinfo=timezone.utc),
+    occurred_at=datetime(2026, 7, 14, 9, 30, 0, tzinfo=UTC),
     actor_type="user",
     actor_id="9c85f3a2-000c-4b5c-b1d1-000000000001",
     event_name="user.registered",

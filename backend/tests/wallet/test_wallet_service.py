@@ -5,6 +5,7 @@ Covers the four Day 2 helpers + get_or_create + audit-event integration.
 
 from __future__ import annotations
 
+import itertools
 import uuid
 from datetime import date
 
@@ -312,5 +313,5 @@ class TestAuditChainIntegrity:
         ).scalars().all()
 
         assert len(events) == 3
-        for prev, curr in zip(events, events[1:], strict=False):
+        for prev, curr in itertools.pairwise(events):
             assert curr.prev_hash == prev.row_hash
