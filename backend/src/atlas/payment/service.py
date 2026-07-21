@@ -24,6 +24,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log import writer as audit
@@ -34,9 +35,22 @@ from atlas.payment.providers.protocol import (
     PaymentMethod,
     PaymentProvider,
     PaymentStatus,
+    WebhookEvent,
 )
+from atlas.wallet import service as wallet_service
 
 CHECKOUT_TTL = timedelta(minutes=30)
+
+# Terminal states — a webhook that arrives after the intent already reached
+# one of these is treated as a duplicate delivery and short-circuited.
+_TERMINAL_STATUSES = frozenset(
+    {
+        PaymentStatus.SUCCEEDED.value,
+        PaymentStatus.FAILED.value,
+        PaymentStatus.REFUNDED.value,
+        PaymentStatus.PARTIALLY_REFUNDED.value,
+    }
+)
 
 
 def _default_provider() -> PaymentProvider:
@@ -113,3 +127,116 @@ async def create_intent(
 
 def checkout_expires_at(row: PaymentIntentRow) -> datetime:
     return row.created_at + CHECKOUT_TTL
+
+
+class UnknownVendorReferenceError(LookupError):
+    """Webhook arrived for a vendor_reference we never issued."""
+
+
+async def process_webhook_event(
+    session: AsyncSession, *, event: WebhookEvent
+) -> PaymentIntentRow | None:
+    """Apply a verified webhook to the intent + wallet + audit log.
+
+    Returns the updated intent row, or None if the event was for an
+    unknown vendor_reference (Paystack sometimes sends events for
+    references we didn't create — logged upstream, not raised).
+
+    Idempotency: the intent's status guards against re-processing. If the
+    intent is already in a terminal state, this is a no-op. Defense in
+    depth: the ledger's `idempotency_key` UNIQUE index catches any
+    second wallet-credit attempt even if the status guard is bypassed.
+
+    Caller owns the transaction (`await session.commit()` at the route).
+    """
+    row = (
+        await session.execute(
+            select(PaymentIntentRow).where(
+                PaymentIntentRow.vendor_reference == event.vendor_reference
+            )
+        )
+    ).scalar_one_or_none()
+
+    if row is None:
+        return None
+
+    if row.status in _TERMINAL_STATUSES:
+        # Duplicate delivery for an already-processed intent.
+        return row
+
+    if event.status is PaymentStatus.SUCCEEDED:
+        await _apply_succeeded(session, row=row, event=event)
+    elif event.status is PaymentStatus.FAILED:
+        await _apply_failed(session, row=row, event=event)
+    else:
+        # Any other status on a webhook (pending, refunded before we've
+        # implemented refunds, etc.) is ignored for V0.5 — status stays
+        # at whatever it was, no ledger side-effects.
+        return row
+
+    return row
+
+
+async def _apply_succeeded(
+    session: AsyncSession,
+    *,
+    row: PaymentIntentRow,
+    event: WebhookEvent,
+) -> None:
+    row.status = PaymentStatus.SUCCEEDED.value
+    row.updated_at = datetime.now(UTC)
+
+    await wallet_service.record_deposit(
+        session,
+        user_id=row.user_id,
+        amount_minor=event.amount_minor,
+        external_ref=event.vendor_reference,
+        idempotency_key=f"deposit:{event.vendor_reference}",
+    )
+
+    if event.fee_minor > 0:
+        await wallet_service.record_payment_fee(
+            session,
+            vendor_reference=event.vendor_reference,
+            amount_minor=event.fee_minor,
+            idempotency_key=f"fee:{event.vendor_reference}",
+        )
+
+    await audit.append(
+        session,
+        actor_type="system",
+        actor_id="payment.webhook",
+        event_name="payment.confirmed",
+        subject_type="payment_intent",
+        subject_id=str(row.id),
+        payload={
+            "user_id": str(row.user_id),
+            "amount_minor": event.amount_minor,
+            "fee_minor": event.fee_minor,
+            "vendor_reference": event.vendor_reference,
+        },
+    )
+
+
+async def _apply_failed(
+    session: AsyncSession,
+    *,
+    row: PaymentIntentRow,
+    event: WebhookEvent,
+) -> None:
+    row.status = PaymentStatus.FAILED.value
+    row.updated_at = datetime.now(UTC)
+
+    await audit.append(
+        session,
+        actor_type="system",
+        actor_id="payment.webhook",
+        event_name="payment.failed",
+        subject_type="payment_intent",
+        subject_id=str(row.id),
+        payload={
+            "user_id": str(row.user_id),
+            "amount_minor": event.amount_minor,
+            "vendor_reference": event.vendor_reference,
+        },
+    )

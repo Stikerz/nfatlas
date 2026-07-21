@@ -1,13 +1,15 @@
-"""Payment HTTP routes (Week 4 surface).
+"""Payment HTTP routes.
 
-Only `POST /api/v1/payments/intents` lands this week. The Paystack
-webhook endpoint arrives Day 4; the `GET /payments/intents/{id}` read
-surface arrives with the mobile polling loop in Week 5.
+Week 4 surface:
+  POST /api/v1/payments/intents            — Day 3
+  POST /api/v1/payments/webhooks/paystack  — Day 4
+
+`GET /payments/intents/{id}` (mobile polling) arrives Week 5.
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.db import get_session
@@ -16,6 +18,8 @@ from atlas.identity.auth import current_session
 from atlas.identity.models import Session as SessionRow
 from atlas.identity.models import User
 from atlas.payment import service as payment_service
+from atlas.payment.providers.paystack import PaystackAdapter
+from atlas.payment.providers.protocol import InvalidSignatureError
 from atlas.payment.schemas import CreateIntentRequest, CreateIntentResponse
 
 router = APIRouter(prefix="/api/v1/payments", tags=["payment"])
@@ -66,3 +70,42 @@ async def create_intent(
     )
     await db.commit()
     return response
+
+
+@router.post(
+    "/webhooks/paystack",
+    status_code=status.HTTP_200_OK,
+)
+async def paystack_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_session),
+) -> Response:
+    """Paystack event ingest — signature-gated per ADR-008 §Invariants 2.
+
+    Reads the raw body BEFORE any parsing (FastAPI's json= param would
+    parse-then-verify — wrong order). Passes the raw bytes to the
+    adapter's verify_webhook which:
+      1. Confirms the x-paystack-signature header is present.
+      2. Computes HMAC-SHA-512 over the raw body with the shared secret.
+      3. Only if match, parses the JSON body and returns a WebhookEvent.
+
+    Signature-fail returns 401 with NO business state change and NO body
+    parsing. Successful events dispatch to payment.service.process_webhook_event
+    (idempotent by both intent-status guard and ledger idempotency key).
+    """
+    raw_body = await request.body()
+    # httpx / Starlette headers are already normalized to lowercase.
+    headers = {k.lower(): v for k, v in request.headers.items()}
+
+    adapter = PaystackAdapter()
+    try:
+        event = adapter.verify_webhook(raw_body, headers)
+    except InvalidSignatureError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={"code": "invalid_signature", "message": str(exc)},
+        ) from exc
+
+    await payment_service.process_webhook_event(db, event=event)
+    await db.commit()
+    return Response(status_code=status.HTTP_200_OK)

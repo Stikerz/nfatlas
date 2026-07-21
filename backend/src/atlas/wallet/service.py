@@ -261,7 +261,7 @@ async def record_prize_award(
                 account_id=user_wallet.id,
                 direction="C",
                 amount_minor=amount_minor,
-                description=f"Prize award — winner user_wallet credit",
+                description="Prize award — winner user_wallet credit",
             ),
         ],
         idempotency_key=idempotency_key,
@@ -277,6 +277,71 @@ async def record_prize_award(
         payload={
             "user_id": str(user_id),
             "draw_id": draw_id,
+            "amount_minor": amount_minor,
+            "transaction_id": str(tx_id),
+        },
+    )
+    return tx_id
+
+
+async def record_payment_fee(
+    session: AsyncSession,
+    *,
+    vendor_reference: str,
+    amount_minor: int,
+    idempotency_key: str,
+) -> uuid.UUID:
+    """Paystack fee posting per ADR-008 §Fee handling.
+
+    Recorded as a SEPARATE transaction from the deposit so the user's
+    deposit history stays clean and the operator's fee cost is visible
+    on its own line.
+
+    Debit  operator_revenue        (reduces income by the fee cost)
+    Credit payment_gateway_clearing (reduces the amount Paystack owes us,
+                                     since they netted the fee before
+                                     settlement)
+    """
+    operator_revenue = await _get_operator_account(
+        session, account_type="operator_revenue"
+    )
+    clearing = await _get_operator_account(
+        session,
+        account_type="payment_gateway_clearing",
+        gateway_id=GATEWAY_PAYSTACK,
+    )
+
+    tx_id = await post_transaction(
+        session,
+        entries=[
+            LedgerEntryDraft(
+                account_id=operator_revenue.id,
+                direction="D",
+                amount_minor=amount_minor,
+                description=f"Paystack fee — vendor_ref {vendor_reference}",
+                external_ref=vendor_reference,
+            ),
+            LedgerEntryDraft(
+                account_id=clearing.id,
+                direction="C",
+                amount_minor=amount_minor,
+                description=f"Paystack fee — clearing offset for {vendor_reference}",
+                external_ref=vendor_reference,
+            ),
+        ],
+        idempotency_key=idempotency_key,
+        external_ref=vendor_reference,
+    )
+
+    await audit.append(
+        session,
+        actor_type="system",
+        actor_id="payment.webhook",
+        event_name="wallet.payment_fee_posted",
+        subject_type="gateway",
+        subject_id=GATEWAY_PAYSTACK,
+        payload={
+            "vendor_reference": vendor_reference,
             "amount_minor": amount_minor,
             "transaction_id": str(tx_id),
         },
