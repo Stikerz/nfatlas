@@ -2,9 +2,25 @@
 
 **Drafted:** 2026-07-21 (Week 4 close; Week 5 kickoff on founder sign-off)
 **Drafted by:** 💻 Amelia (BMad Dev)
-**Status:** **Draft — pending founder decisions on §9 asks.**
+**Status:** **Approved 2026-07-22** — founder resolved all §9 asks on Amelia's recommendations; ready to start Day 1 Monday.
 **Applies to:** V0.5 investor demo; Ticket + Draw-skeleton slices of the flagship flow (`v0.5-demo-plan.md §2.2, §2.4, §2.5, §2.10`).
 **Pairs with:** `v0.5-demo-plan.md §5 Week 5`, `week-4-build-plan.md` (foundation — wallet, payment, webhook already live), `docs/adr/ADR-{003,004,005,006,008}.md`, `_bmad-output/planning-artifacts/design/wireframes/{02,04,10}.md`.
+
+---
+
+## 0. Founder decisions (2026-07-22)
+
+Resolves §9 asks. All five adopted on Amelia's recommendations.
+
+| # | Ask | Decision | Impact |
+|---|---|---|---|
+| 1 | Ticket payment path | **Direct-to-Paystack per ticket** | Each ticket = new Paystack checkout intent. `payment_intents.purpose` extended (`deposit` \| `ticket`). Wallet holds winnings + refunds only in V0.5. W4 `wallet.record_ticket_purchase` stays in the code but dormant; `WALLET_ALLOW_STUB_DRAW=false` in env=dev + env=test now that real `draws.id` exists. |
+| 2 | Skill-question retry semantics | **New question, no penalty** | Wrong → next question served. Attempts logged for audit. Anti-abuse deferred to V1. |
+| 3 | Skill-question pool source | **Hybrid: table now, no admin UI** | `skill_questions` + `skill_question_options` tables. Seed script populates 10 questions. Admin CRUD is a V1 ticket. |
+| 4 | Free-entry slip reference format | **Any string, unique per draw** | DB unique index on `(draw_id, slip_reference)`. Real format is a Phase 3 counsel + printer decision. |
+| 5 | Draw seed `server_seed` handling | **Plaintext in seed script + TODO(week-6)** | V0.5 doesn't run a real reveal; seed is a placeholder. TODO markers in migration comment + seed script. Encrypted-at-rest per ADR-006 §Stage 1 lands with the draw-engine module Week 6. |
+
+Adaeze's items in §5 (skill-question standard clarity, free-entry parity by construction, audit-payload redaction) still owed by Day 4.
 
 ---
 
@@ -245,7 +261,7 @@ Ranked by likelihood × slip-impact.
 
 ## 9. Asks to founder before Day 1 code starts
 
-Five decisions block Day 1. Recommendations below.
+**All 5 resolved 2026-07-22 — see §0.** Preserved below as historical record.
 
 1. **Ticket payment path: direct-to-Paystack or wallet-first?**
    The demo plan §2.4 reads "Buy paid ticket → Paystack checkout → ticket appears" — implying each ticket = new Paystack checkout. Alternative: user deposits into wallet once, subsequent ticket purchases debit the wallet (matches `wallet.record_ticket_purchase` built Day 2 W4).
