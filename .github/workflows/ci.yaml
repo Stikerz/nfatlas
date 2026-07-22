@@ -35,6 +35,7 @@ jobs:
       ATLAS_SESSION_TTL_HOURS: "8"
       ATLAS_PAYSTACK_STUB_MODE: "true"
       ATLAS_PAYSTACK_WEBHOOK_SECRET: ci_paystack_webhook_secret_do_not_use_in_prod
+      ATLAS_WALLET_ALLOW_STUB_DRAW: "false"
     defaults:
       run:
         working-directory: backend

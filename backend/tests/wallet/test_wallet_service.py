@@ -145,9 +145,23 @@ class TestRecordDeposit:
         assert await balance_of(db_session, account_id=user_wallet.id) == 100_00
 
 
+@pytest.fixture
+def _stub_draw_flag_on(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Enable the stub-draw flag for tests that exercise the dormant
+    wallet.record_ticket_purchase helper against string draw ids.
+
+    The flag defaults to false in dev + test envs from W5 Day 1 onwards
+    (real draws.id exists now — see week-5-build-plan §0 ask 1). Tests
+    that specifically want the V0.4 stub semantics opt-in via this
+    fixture."""
+
+    stub_on = Settings(wallet_allow_stub_draw=True)  # type: ignore[call-arg]
+    monkeypatch.setattr("atlas.wallet.service.get_settings", lambda: stub_on)
+
+
 class TestRecordTicketPurchase:
     async def test_debits_wallet_and_credits_prize_pool(
-        self, db_session: AsyncSession
+        self, db_session: AsyncSession, _stub_draw_flag_on: None
     ) -> None:
         user_id = await _make_user(db_session)
         # Fund the wallet first so the purchase has money to debit.
@@ -177,12 +191,9 @@ class TestRecordTicketPurchase:
         assert await balance_of(db_session, account_id=prize_pool.id) == 100_00
 
     async def test_stub_flag_off_blocks_purchase(
-        self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+        self, db_session: AsyncSession
     ) -> None:
-        # Swap the cached settings with a version that has the flag off.
-        original = Settings(wallet_allow_stub_draw=False)  # type: ignore[call-arg]
-        monkeypatch.setattr("atlas.wallet.service.get_settings", lambda: original)
-
+        # Default state — WALLET_ALLOW_STUB_DRAW is false in env=test now.
         user_id = await _make_user(db_session)
         with pytest.raises(wallet.StubDrawDisabledError):
             await wallet.record_ticket_purchase(
@@ -196,7 +207,7 @@ class TestRecordTicketPurchase:
 
 class TestRecordPrizeAward:
     async def test_debits_prize_pool_and_credits_winner_wallet(
-        self, db_session: AsyncSession
+        self, db_session: AsyncSession, _stub_draw_flag_on: None
     ) -> None:
         # Fund a prize pool via a ticket purchase from user A, then award to user B.
         user_a = await _make_user(db_session)
@@ -265,7 +276,7 @@ class TestRecordRefund:
 
 class TestAuditChainIntegrity:
     async def test_deposit_then_purchase_then_award_chain_intact(
-        self, db_session: AsyncSession
+        self, db_session: AsyncSession, _stub_draw_flag_on: None
     ) -> None:
         user_id = await _make_user(db_session)
 

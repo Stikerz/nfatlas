@@ -9,6 +9,7 @@ from fastapi import FastAPI
 
 from atlas import __version__
 from atlas.config import get_settings
+from atlas.draw.routes import router as draw_router
 from atlas.identity.routes import router as identity_router
 from atlas.payment.routes import router as payment_router
 
@@ -27,3 +28,4 @@ async def healthz() -> dict[str, str]:
 
 app.include_router(identity_router)
 app.include_router(payment_router)
+app.include_router(draw_router)
