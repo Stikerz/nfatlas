@@ -191,12 +191,12 @@ jobs:
           #   identity/session_service.py    — JWT signing/verify
           #   identity/otp_service.py        — HMAC pepper
           #   payment/providers/paystack.py  — outbound API auth + webhook HMAC
-          if grep -rn 'get_secret_value' backend/src/atlas \
-              --include='*.py' \
-              --exclude='db.py' \
-              --exclude='session_service.py' \
-              --exclude='otp_service.py' \
-              --exclude='paystack.py' ; then
+          #   skill/service.py               — HMAC pepper for question rotation
+          matches=$(grep -rn 'get_secret_value' backend/src/atlas --include='*.py' \
+              | grep -vE '(db\.py|identity/session_service\.py|identity/otp_service\.py|payment/providers/paystack\.py|skill/service\.py):' \
+              || true)
+          if [ -n "$matches" ] ; then
+            echo "$matches"
             echo "::error::get_secret_value() is restricted; add the module to the whitelist in ci.yaml if genuinely needed."
             exit 1
           fi
