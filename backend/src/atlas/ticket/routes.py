@@ -12,6 +12,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from atlas.admin import service as admin_service
 from atlas.db import get_session
 from atlas.draw import service as draw_service
 from atlas.idempotency.dependency import IdempotencyGuard, idempotency_guard
@@ -21,6 +22,8 @@ from atlas.identity.models import User
 from atlas.payment import service as payment_service
 from atlas.ticket import service as ticket_service
 from atlas.ticket.schemas import (
+    FreeEntryRequest,
+    FreeEntryResponse,
     PurchaseTicketRequest,
     PurchaseTicketResponse,
     TicketList,
@@ -30,6 +33,7 @@ from atlas.ticket.schemas import (
 router = APIRouter(prefix="/api/v1/tickets", tags=["ticket"])
 
 _PURCHASE = "POST /api/v1/tickets/purchase"
+_FREE = "POST /api/v1/tickets/free"
 
 
 @router.post(
@@ -117,6 +121,81 @@ async def purchase(
         amount_minor=row.amount_minor,
         currency=row.currency,
         expires_at=payment_service.checkout_expires_at(row),
+    )
+    await idempotency.record(
+        db,
+        status_code=status.HTTP_201_CREATED,
+        response_body=response.model_dump(mode="json"),
+    )
+    await db.commit()
+    return response
+
+
+@router.post(
+    "/free",
+    status_code=status.HTTP_201_CREATED,
+    response_model=FreeEntryResponse,
+)
+async def free_entry(
+    body: FreeEntryRequest,
+    db: AsyncSession = Depends(get_session),
+    session: SessionRow = Depends(current_session),
+    idempotency: IdempotencyGuard = Depends(idempotency_guard(endpoint=_FREE)),
+) -> FreeEntryResponse:
+    if idempotency.cached_response is not None:
+        return FreeEntryResponse.model_validate(idempotency.cached_response)
+
+    # Superadmin gate — ADR-009. V1 will split into finer permissions.
+    if not await admin_service.is_superadmin(db, user_id=session.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "operator_role_required",
+                "message": "Free-entry transcription is an operator action.",
+            },
+        )
+
+    # Subject user must exist. Draw existence + sales_open enforced in
+    # ticket.service.issue_free (via draw_service.is_sales_open).
+    subject = await db.get(User, body.subject_user_id)
+    if subject is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "user_not_found", "message": "Unknown subject user id."},
+        )
+
+    try:
+        ticket = await ticket_service.issue_free(
+            db,
+            actor_operator_id=session.user_id,
+            subject_user_id=body.subject_user_id,
+            draw_id=body.draw_id,
+            slip_reference=body.slip_reference,
+        )
+    except ticket_service.DrawNotOpenForFreeEntryError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "draw_not_open",
+                "message": "This draw is not accepting entries.",
+            },
+        ) from exc
+    except ticket_service.DuplicateSlipError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "slip_already_transcribed",
+                "message": "This slip reference has already been transcribed for this draw.",
+            },
+        ) from exc
+
+    response = FreeEntryResponse(
+        ticket_id=ticket.id,
+        draw_id=ticket.draw_id,
+        ticket_number=ticket.ticket_number,
+        subject_user_id=body.subject_user_id,
+        entry_source=ticket.entry_source,
+        issued_at=ticket.issued_at,
     )
     await idempotency.record(
         db,

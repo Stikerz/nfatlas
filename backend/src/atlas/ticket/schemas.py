@@ -36,3 +36,21 @@ class TicketSummary(BaseModel):
 
 class TicketList(BaseModel):
     items: list[TicketSummary]
+
+
+class FreeEntryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    draw_id: uuid.UUID
+    subject_user_id: uuid.UUID
+    # Any string per plan §0 ask 4 (real format is a Phase 3 decision).
+    slip_reference: str
+
+
+class FreeEntryResponse(BaseModel):
+    ticket_id: uuid.UUID
+    draw_id: uuid.UUID
+    ticket_number: int
+    subject_user_id: uuid.UUID
+    entry_source: str  # always 'free'
+    issued_at: datetime
