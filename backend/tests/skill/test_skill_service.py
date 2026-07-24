@@ -157,13 +157,14 @@ class TestNextQuestionRotation:
     ) -> None:
         """Two different users in the same minute — rotation MUST vary
         deterministically per user_id or else everyone gets the same
-        question at the same time (a coordination signal)."""
+        question at the same time (a coordination signal).
+
+        Sample size 20 vs pool size 5 → failure probability (1/5)^19 ≈
+        2e-14 assuming a well-behaved HMAC. If this test does fail, the
+        signal is a broken rotation function, not a flake."""
         pool_size = 5
-        # Same bucket for both; different user_ids → offsets differ if the
-        # hash is well-behaved. Golden vectors — we don't care what the
-        # exact offsets are, only that they can differ.
         offsets = set()
-        for _ in range(4):
+        for _ in range(20):
             uid = uuid.uuid4()
             offsets.add(
                 skill_service._rotation_offset(
