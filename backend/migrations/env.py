@@ -28,6 +28,7 @@ from atlas.wallet import models as _wallet_models  # noqa: F401
 from atlas.payment import models as _payment_models  # noqa: F401
 from atlas.draw import models as _draw_models  # noqa: F401
 from atlas.skill import models as _skill_models  # noqa: F401
+from atlas.ticket import models as _ticket_models  # noqa: F401
 
 config = context.config
 

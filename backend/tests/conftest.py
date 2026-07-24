@@ -34,6 +34,8 @@ _TRUNCATE_TABLES = (
     "idempotency_records",
     "ledger_entries",
     "payment_intents",
+    "free_entry_slips",
+    "tickets",
     "skill_question_attempts",
     "skill_question_options",
     "skill_questions",

@@ -284,6 +284,70 @@ async def record_prize_award(
     return tx_id
 
 
+async def record_ticket_sale(
+    session: AsyncSession,
+    *,
+    amount_minor: int,
+    external_ref: str,
+    idempotency_key: str,
+) -> uuid.UUID:
+    """Direct-to-Paystack ticket-purchase deposit-side per week-5-build-
+    plan §0 ask 1.
+
+    Debit  payment_gateway_clearing (money in flight from user to us)
+    Credit operator_revenue          (ticket-sale income)
+
+    Distinct from record_deposit — this path never touches user_wallet
+    because V0.5 users don't deposit-to-wallet-then-buy. The fee side
+    posts separately via record_payment_fee (same shape as W4).
+    """
+    operator_revenue = await _get_operator_account(
+        session, account_type="operator_revenue"
+    )
+    clearing = await _get_operator_account(
+        session,
+        account_type="payment_gateway_clearing",
+        gateway_id=GATEWAY_PAYSTACK,
+    )
+
+    tx_id = await post_transaction(
+        session,
+        entries=[
+            LedgerEntryDraft(
+                account_id=clearing.id,
+                direction="D",
+                amount_minor=amount_minor,
+                description=f"Ticket sale — payment_gateway_clearing debit for {external_ref}",
+                external_ref=external_ref,
+            ),
+            LedgerEntryDraft(
+                account_id=operator_revenue.id,
+                direction="C",
+                amount_minor=amount_minor,
+                description=f"Ticket sale — operator_revenue for {external_ref}",
+                external_ref=external_ref,
+            ),
+        ],
+        idempotency_key=idempotency_key,
+        external_ref=external_ref,
+    )
+
+    await audit.append(
+        session,
+        actor_type="system",
+        actor_id="payment.webhook",
+        event_name="wallet.ticket_sale_recorded",
+        subject_type="gateway",
+        subject_id=GATEWAY_PAYSTACK,
+        payload={
+            "amount_minor": amount_minor,
+            "external_ref": external_ref,
+            "transaction_id": str(tx_id),
+        },
+    )
+    return tx_id
+
+
 async def record_payment_fee(
     session: AsyncSession,
     *,

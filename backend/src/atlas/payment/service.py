@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, datetime, timedelta
+from typing import Any, Literal
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,9 +38,12 @@ from atlas.payment.providers.protocol import (
     PaymentStatus,
     WebhookEvent,
 )
+from atlas.ticket import service as ticket_service
 from atlas.wallet import service as wallet_service
 
 CHECKOUT_TTL = timedelta(minutes=30)
+
+Purpose = Literal["deposit", "ticket"]
 
 # Terminal states — a webhook that arrives after the intent already reached
 # one of these is treated as a duplicate delivery and short-circuited.
@@ -66,13 +70,22 @@ async def create_intent(
     method: str,
     description: str,
     idempotency_key: str,
+    purpose: Purpose = "deposit",
+    extra_metadata: dict[str, Any] | None = None,
     provider: PaymentProvider | None = None,
 ) -> PaymentIntentRow:
     """Mint a new payment intent. Returns the persisted row.
 
+    `purpose='deposit'` (default) → webhook credits user_wallet.
+    `purpose='ticket'` → webhook credits operator_revenue + mints a
+      ticket. `extra_metadata` MUST carry `draw_id` and `entitlement_id`
+      for tickets — the webhook handler reads them back from
+      `payment_intents.metadata` for dispatch.
+
     Caller owns the transaction (`await session.commit()` at the route).
     """
     prov = provider or _default_provider()
+    stored_metadata: dict[str, Any] = dict(extra_metadata or {})
 
     row = PaymentIntentRow(
         user_id=user_id,
@@ -81,8 +94,10 @@ async def create_intent(
         method=method,
         status=PaymentStatus.INITIATED.value,
         vendor=prov.name,
+        purpose=purpose,
         idempotency_key=idempotency_key,
         description=description,
+        metadata_=stored_metadata,
     )
     session.add(row)
     await session.flush()
@@ -96,7 +111,7 @@ async def create_intent(
             method=PaymentMethod(method),
             description=description,
             email=user_email,
-            metadata={"payment_intent_id": str(row.id)},
+            metadata={"payment_intent_id": str(row.id), **stored_metadata},
         )
     )
 
@@ -118,6 +133,7 @@ async def create_intent(
             "user_id": str(user_id),
             "amount_minor": amount_minor,
             "method": method,
+            "purpose": purpose,
             "vendor": prov.name,
             "vendor_reference": result.vendor_reference,
         },
@@ -186,13 +202,16 @@ async def _apply_succeeded(
     row.status = PaymentStatus.SUCCEEDED.value
     row.updated_at = datetime.now(UTC)
 
-    await wallet_service.record_deposit(
-        session,
-        user_id=row.user_id,
-        amount_minor=event.amount_minor,
-        external_ref=event.vendor_reference,
-        idempotency_key=f"deposit:{event.vendor_reference}",
-    )
+    if row.purpose == "ticket":
+        await _apply_ticket_success(session, row=row, event=event)
+    else:
+        await wallet_service.record_deposit(
+            session,
+            user_id=row.user_id,
+            amount_minor=event.amount_minor,
+            external_ref=event.vendor_reference,
+            idempotency_key=f"deposit:{event.vendor_reference}",
+        )
 
     if event.fee_minor > 0:
         await wallet_service.record_payment_fee(
@@ -213,8 +232,52 @@ async def _apply_succeeded(
             "user_id": str(row.user_id),
             "amount_minor": event.amount_minor,
             "fee_minor": event.fee_minor,
+            "purpose": row.purpose,
             "vendor_reference": event.vendor_reference,
         },
+    )
+
+
+async def _apply_ticket_success(
+    session: AsyncSession,
+    *,
+    row: PaymentIntentRow,
+    event: WebhookEvent,
+) -> None:
+    """Ticket-purpose branch: post ticket-sale ledger tx, mint the ticket.
+
+    Metadata must carry `draw_id` and `entitlement_id` (both UUID
+    strings) — set by create_intent's caller. Missing / malformed
+    metadata is a programmer error; log and skip.
+    """
+    draw_id_str = row.metadata_.get("draw_id")
+    entitlement_str = row.metadata_.get("entitlement_id")
+    if not draw_id_str or not entitlement_str:
+        # Refuse to touch the ledger with a half-formed intent — the
+        # audit event surfaces the misconfiguration for post-mortem.
+        await audit.append(
+            session,
+            actor_type="system",
+            actor_id="payment.webhook",
+            event_name="payment.ticket_metadata_missing",
+            subject_type="payment_intent",
+            subject_id=str(row.id),
+            payload={"metadata": row.metadata_},
+        )
+        return
+
+    await wallet_service.record_ticket_sale(
+        session,
+        amount_minor=event.amount_minor,
+        external_ref=event.vendor_reference,
+        idempotency_key=f"ticket_sale:{event.vendor_reference}",
+    )
+    await ticket_service.issue_paid(
+        session,
+        user_id=row.user_id,
+        draw_id=uuid.UUID(draw_id_str),
+        payment_intent_id=row.id,
+        entitlement_id=uuid.UUID(entitlement_str),
     )
 
 

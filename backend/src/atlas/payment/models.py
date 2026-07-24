@@ -33,6 +33,9 @@ class PaymentIntentRow(Base):
             name="status_enum",
         ),
         CheckConstraint("vendor IN ('paystack')", name="vendor_enum"),
+        CheckConstraint(
+            "purpose IN ('deposit', 'ticket')", name="purpose_enum"
+        ),
         Index("ix_payment_intents_user_id_created_at", "user_id", "created_at"),
     )
 
@@ -53,6 +56,9 @@ class PaymentIntentRow(Base):
         String, nullable=False, server_default=text("'initiated'")
     )
     vendor: Mapped[str] = mapped_column(String, nullable=False, server_default=text("'paystack'"))
+    purpose: Mapped[str] = mapped_column(
+        String, nullable=False, server_default=text("'deposit'")
+    )
     vendor_reference: Mapped[str | None] = mapped_column(String, nullable=True)
     checkout_url: Mapped[str | None] = mapped_column(String, nullable=True)
     idempotency_key: Mapped[str] = mapped_column(String, nullable=False)
