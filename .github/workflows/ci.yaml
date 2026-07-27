@@ -181,6 +181,32 @@ jobs:
             echo "::error::Paystack SDK imports must live in atlas/payment/providers/paystack.py"
             exit 1
           fi
+      - name: Ticket + FreeEntrySlip writes must go through ticket.service
+        run: |
+          set -e
+          # ORM constructor calls (Ticket(...), FreeEntrySlip(...)) may
+          # only appear in atlas/ticket/ — the module owns _mint_ticket
+          # + issue_free as the sole INSERT paths. Match `\s*\(` so
+          # docstrings mentioning "Ticket" don't false-positive.
+          if grep -rnE '\b(Ticket|FreeEntrySlip)\s*\(' backend/src/atlas \
+              --include='*.py' \
+              --exclude-dir=ticket ; then
+            echo "::error::Ticket / FreeEntrySlip writes must go through atlas.ticket.service"
+            exit 1
+          fi
+      - name: Draw construction must go through draw.service
+        run: |
+          set -e
+          # V0.5 only reads draws from ticket + skill modules; row
+          # construction (any state) belongs to atlas.draw.service.
+          # State mutations (draft→committed→sales_open→sales_closed→
+          # revealed) land Week 6 with the reveal engine.
+          if grep -rnE '\bDraw\s*\(' backend/src/atlas \
+              --include='*.py' \
+              --exclude-dir=draw ; then
+            echo "::error::Draw construction must go through atlas.draw.service"
+            exit 1
+          fi
       - name: get_secret_value discipline (ADR-012)
         run: |
           set -e
