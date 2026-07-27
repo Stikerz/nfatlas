@@ -23,3 +23,13 @@ class DrawSummary(BaseModel):
 
 class DrawList(BaseModel):
     items: list[DrawSummary]
+
+
+class DrawCloseResponse(BaseModel):
+    """Return shape from POST /draws/{id}/close."""
+
+    id: uuid.UUID
+    state: str
+    tickets_hash: str
+    close_time: datetime
+    draw_time: datetime
