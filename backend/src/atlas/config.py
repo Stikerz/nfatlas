@@ -77,6 +77,14 @@ class Settings(BaseSettings):
         min_length=16,
     )
 
+    # --- Draw / entropy (Week 6) ------------------------------------------
+    # Founder decision 2026-07-27 §0.1: hybrid — stub in tests+CI, live in
+    # demo dev. Production must be 'live' (validated below).
+    draw_entropy_mode: Literal["stub", "live"] = "stub"
+    # Drand mainnet group public key — persisted for V1 client-side BLS
+    # verify. Optional today (V0.5 trusts drand's HTTPS endpoint).
+    drand_group_public_key: str | None = None
+
     @model_validator(mode="after")
     def _prod_safety(self) -> Settings:
         if self.env == "production":
@@ -94,6 +102,11 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "ATLAS_PAYSTACK_SECRET_KEY and ATLAS_PAYSTACK_PUBLIC_KEY "
                     "are required when stub mode is off."
+                )
+            if self.draw_entropy_mode == "stub":
+                raise ValueError(
+                    "ATLAS_DRAW_ENTROPY_MODE must be 'live' in production "
+                    "(V0.5 stub for demo-offline runs only)."
                 )
         if not self.paystack_stub_mode and self.paystack_secret_key is None:
             raise ValueError(
