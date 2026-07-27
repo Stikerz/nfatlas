@@ -2,9 +2,25 @@
 
 **Drafted:** 2026-07-27 (Week 5 close; Week 6 kickoff on founder sign-off)
 **Drafted by:** 💻 Amelia (BMad Dev)
-**Status:** **Draft — pending founder decisions on §9 asks.**
+**Status:** **Approved 2026-07-27** — founder resolved all §9 asks on Amelia's recommendations; ready to start Day 1 Monday.
 **Applies to:** V0.5 investor demo; the trust-story path — commit → sale → close → reveal → verify.
 **Pairs with:** `v0.5-demo-plan.md §5 Week 6`, `week-5-build-plan.md` (foundation: draw skeleton, tickets, wallet), `docs/adr/ADR-{002,005,006}.md`, `_bmad-output/planning-artifacts/design/wireframes/{11,12,13,14}.md`.
+
+---
+
+## 0. Founder decisions (2026-07-27)
+
+Resolves §9 asks. All five adopted on Amelia's recommendations.
+
+| # | Ask | Decision | Impact |
+|---|---|---|---|
+| 1 | Entropy sources | **Hybrid: stub in tests+CI, live in demo** | `ATLAS_DRAW_ENTROPY_MODE=stub` (default) for tests + CI; `=live` for demo dev sessions. Live-mode fetch failure logs + falls back to stub with a visible banner. Investor demo shows real mempool.space + blockstream.info + drand fetch. |
+| 2 | Reveal timing | **Skip 1h delay in V0.5 demo; honour in prod** | Reveal endpoint accepts admin override; `Settings.draw_reveal_delay_enforced` = false in dev + test, true in prod. Documented as demo shortcut in AI Integration Log. |
+| 3 | Winner selection | **Rejection sampling** | Spec-correct per ADR-006. One extra loop; unbiased regardless of ticket count. Avoids V1 rewrite. |
+| 4 | Admin surface | **Curl-only in W6, Next.js in W7** | Backend endpoints (POST /draws, /draws/{id}/close, /draws/{id}/reveal) are the interface. Founder demos via terminal + admin audit-log viewer. Frees ~1.5d for backend hardening. |
+| 5 | Winner notification | **V0.5 shortcut with try/except** | `atlas.notification.notify_winner` sends via mailhog_sender from reveal handler; wrapped in try/except so SMTP failure never aborts reveal. `notification.winner_selected` audit event always fires. Full outbox is V1. |
+
+Adaeze's items in §5 (winner-selection algorithm sign-off, proof-endpoint PII posture) still owed by Day 4.
 
 ---
 
@@ -243,7 +259,7 @@ Ranked by likelihood × slip-impact.
 
 ## 9. Asks to founder before Day 1 code starts
 
-Five decisions block Day 1. Recommendations below.
+**All 5 resolved 2026-07-27 — see §0.** Preserved below as historical record.
 
 1. **Entropy sources — real fetch in demo, or stubbed?**
    Options: (a) full stub mode in V0.5 (deterministic fixtures per draw_id); (b) real fetch against mempool.space + blockstream.info + drand for the demo; (c) stub in tests + CI, real fetch in demo dev with a `ATLAS_DRAW_ENTROPY_MODE=live` flag.
