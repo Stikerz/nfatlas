@@ -49,3 +49,31 @@ async def send_otp(*, phone_e164: str, code: str, purpose: str) -> None:
             phone_e164,
         )
         raise
+
+
+async def send_notification(
+    *, to_email: str, subject: str, body: str, from_addr: str = "notifications@atlas.dev"
+) -> None:
+    """Generic notification email — shared by W6 winner notifications
+    and any Week 7+ mailer."""
+    settings = get_settings()
+    message = EmailMessage()
+    message["From"] = from_addr
+    message["To"] = to_email
+    message["Subject"] = subject
+    message.set_content(body)
+
+    try:
+        await aiosmtplib.send(
+            message,
+            hostname=settings.mailhog_host,
+            port=settings.mailhog_port,
+        )
+    except Exception:
+        logger.exception(
+            "mailhog notification delivery failed (host=%s port=%s to=%s)",
+            settings.mailhog_host,
+            settings.mailhog_port,
+            to_email,
+        )
+        raise

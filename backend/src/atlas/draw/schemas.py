@@ -54,3 +54,53 @@ class WinnerSummary(BaseModel):
 
 class WinnerList(BaseModel):
     items: list[WinnerSummary]
+
+
+class WinnerProof(BaseModel):
+    """Winner shape in the public proof — user_id_hash only, never raw."""
+
+    position: int
+    is_primary: bool
+    ticket_id: uuid.UUID
+    user_id_hash: str
+
+
+class EntropyProof(BaseModel):
+    mode: str
+    bitcoin_hash: str
+    bitcoin_height: int
+    bitcoin_timestamp: int
+    drand_round: int
+    drand_randomness: str
+    drand_signature: str
+    verified_at: str
+
+
+class DrawProof(BaseModel):
+    """Public proof endpoint response.
+
+    Pre-reveal (state != 'revealed'): only the pre-reveal fields are
+    populated; post-reveal fields are None. Post-reveal: everything
+    a third-party verifier needs to re-run select_winners and reach
+    the same winner.
+
+    Explicit schema — no user emails, no phone_e164, no ticket owner
+    identifiers beyond the SHA-256 hash. Adaeze §5 posture.
+    """
+
+    id: uuid.UUID
+    state: str
+    commitment: str
+    close_time: datetime
+    draw_time: datetime
+
+    # Post-reveal only.
+    revealed_at: datetime | None = None
+    server_seed: str | None = None
+    tickets_hash: str | None = None
+    ticket_count: int | None = None
+    ordered_ticket_ids: list[uuid.UUID] | None = None
+    entropy: EntropyProof | None = None
+    winners: list[WinnerProof] | None = None
+    algorithm_reference: str | None = None
+    reserves: int | None = None

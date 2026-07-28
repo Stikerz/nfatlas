@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,9 +16,12 @@ from atlas.draw.models import Draw
 from atlas.draw.schemas import (
     DrawCloseResponse,
     DrawList,
+    DrawProof,
     DrawRevealResponse,
     DrawSummary,
+    EntropyProof,
     WinnerList,
+    WinnerProof,
     WinnerSummary,
 )
 from atlas.idempotency.dependency import IdempotencyGuard, idempotency_guard
@@ -182,6 +186,84 @@ async def reveal_draw(
     )
     await db.commit()
     return response
+
+
+_ALGORITHM_REF = (
+    "https://github.com/Stikerz/nfatlas/blob/main/docs/adr/"
+    "ADR-006-commit-reveal-protocol-and-public-entropy.md"
+)
+
+
+@router.get(
+    "/{draw_id}/proof",
+    status_code=status.HTTP_200_OK,
+    response_model=DrawProof,
+)
+async def get_proof(
+    draw_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+) -> DrawProof:
+    """PUBLIC (no auth) — the trust surface.
+
+    Pre-reveal: minimal shape (id, state, commitment, close_time,
+    draw_time). Post-reveal: full proof so any third party can re-run
+    select_winners against these inputs. Never leaks email/phone —
+    winner identifiers are SHA-256 hashes of user_id.
+    """
+    try:
+        row = await draw_service.get(db, draw_id=draw_id)
+    except draw_service.DrawNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "draw_not_found", "message": "Unknown draw id."},
+        ) from exc
+
+    if row.state != "revealed":
+        return DrawProof(
+            id=row.id,
+            state=row.state,
+            commitment=row.commitment,
+            close_time=row.close_time,
+            draw_time=row.draw_time,
+        )
+
+    ticket_ids = await draw_service.ordered_ticket_ids(db, draw_id=draw_id)
+    winners = await draw_service.list_winners(db, draw_id=draw_id)
+    inputs = row.reveal_inputs
+
+    return DrawProof(
+        id=row.id,
+        state=row.state,
+        commitment=row.commitment,
+        close_time=row.close_time,
+        draw_time=row.draw_time,
+        revealed_at=row.revealed_at,
+        server_seed=row.server_seed_encrypted,
+        tickets_hash=row.tickets_hash,
+        ticket_count=len(ticket_ids),
+        ordered_ticket_ids=ticket_ids,
+        entropy=EntropyProof(
+            mode=inputs.get("mode", ""),
+            bitcoin_hash=inputs.get("bitcoin_hash", ""),
+            bitcoin_height=int(inputs.get("bitcoin_height", 0)),
+            bitcoin_timestamp=int(inputs.get("bitcoin_timestamp", 0)),
+            drand_round=int(inputs.get("drand_round", 0)),
+            drand_randomness=inputs.get("drand_randomness", ""),
+            drand_signature=inputs.get("drand_signature", ""),
+            verified_at=inputs.get("verified_at", ""),
+        ),
+        winners=[
+            WinnerProof(
+                position=w.position,
+                is_primary=w.is_primary,
+                ticket_id=w.ticket_id,
+                user_id_hash=hashlib.sha256(str(w.user_id).encode("utf-8")).hexdigest(),
+            )
+            for w in winners
+        ],
+        algorithm_reference=_ALGORITHM_REF,
+        reserves=max(0, len(winners) - 1),
+    )
 
 
 @router.get(

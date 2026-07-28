@@ -16,6 +16,7 @@ next state string or an IllegalTransitionError.
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from datetime import UTC, datetime
 
@@ -29,7 +30,10 @@ from atlas.draw import state_machine
 from atlas.draw.entropy.protocol import EntropyProvider
 from atlas.draw.entropy.provider import default_provider
 from atlas.draw.models import Draw, DrawWinner
+from atlas.notification.winner import notify_winner
 from atlas.ticket.models import Ticket
+
+logger = logging.getLogger("atlas.draw.service")
 
 
 class DrawNotFoundError(LookupError):
@@ -261,6 +265,29 @@ async def reveal_draw(
             },
         )
 
+    # Notification — V0.5 shortcut per §0 ask 5. Try/except each call so
+    # a mailhog outage does NOT abort a reveal. The
+    # notification.winner_selected audit event fires INSIDE notify_winner
+    # before the delivery attempt, so the trail records "we tried" even
+    # if SMTP is down.
+    for row in winner_rows:
+        try:
+            await notify_winner(
+                session,
+                user_id=row.user_id,
+                draw_id=draw_id,
+                position=row.position,
+                is_primary=row.is_primary,
+                prize_copy=draw.prize_copy,
+            )
+        except Exception:
+            logger.exception(
+                "winner notification failed (draw=%s user=%s position=%s)",
+                draw_id,
+                row.user_id,
+                row.position,
+            )
+
     return draw
 
 
@@ -275,3 +302,23 @@ async def list_winners(
         )
     ).scalars().all()
     return list(rows)
+
+
+async def ordered_ticket_ids(
+    session: AsyncSession, *, draw_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """Deterministic ticket ordering used for tickets_hash + reveal.
+
+    Kept as a service function so the proof endpoint (Day 4) reads the
+    same ordering that close_draw + reveal_draw consume — no risk of
+    two orderings diverging.
+    """
+    return list(
+        (
+            await session.execute(
+                select(Ticket.id)
+                .where(Ticket.draw_id == draw_id)
+                .order_by(Ticket.ticket_number)
+            )
+        ).scalars().all()
+    )
