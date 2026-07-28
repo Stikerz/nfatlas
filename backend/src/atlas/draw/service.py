@@ -24,8 +24,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log import writer as audit
+from atlas.draw import reveal as reveal_algo
 from atlas.draw import state_machine
-from atlas.draw.models import Draw
+from atlas.draw.entropy.protocol import EntropyProvider
+from atlas.draw.entropy.provider import default_provider
+from atlas.draw.models import Draw, DrawWinner
 from atlas.ticket.models import Ticket
 
 
@@ -120,3 +123,155 @@ async def close_draw(session: AsyncSession, *, draw_id: uuid.UUID) -> Draw:
         },
     )
     return draw
+
+
+async def reveal_draw(
+    session: AsyncSession,
+    *,
+    draw_id: uuid.UUID,
+    entropy_provider: EntropyProvider | None = None,
+    reserves: int = 5,
+) -> Draw:
+    """Fetch entropy, run winner selection, persist winners + proof.
+
+    Idempotent: reveal on an already-revealed draw returns the existing
+    row without re-fetching entropy or re-selecting winners. Reveal on
+    any other state raises DrawStateError.
+
+    Caller owns the transaction (route calls session.commit()).
+    """
+    draw = await get(session, draw_id=draw_id)
+
+    if draw.state == state_machine.DrawState.REVEALED.value:
+        return draw
+
+    try:
+        next_state = state_machine.transition(
+            draw.state, state_machine.DrawAction.REVEAL.value
+        )
+    except state_machine.IllegalTransitionError as exc:
+        raise DrawStateError(str(exc)) from exc
+
+    if draw.tickets_hash is None:
+        # Should be impossible from the state machine (sales_closed
+        # implies close_draw ran and set tickets_hash) — but a defensive
+        # guard catches manual DB tampering.
+        raise DrawStateError(
+            f"draw {draw_id} is sales_closed but has no tickets_hash"
+        )
+
+    ticket_ids = (
+        await session.execute(
+            select(Ticket.id)
+            .where(Ticket.draw_id == draw_id)
+            .order_by(Ticket.ticket_number)
+        )
+    ).scalars().all()
+
+    provider = entropy_provider or default_provider()
+    entropy_inputs = await provider.fetch(draw.close_time)
+
+    server_seed_bytes = bytes.fromhex(draw.server_seed_encrypted)
+
+    winner_ticket_ids = reveal_algo.select_winners(
+        server_seed=server_seed_bytes,
+        entropy=entropy_inputs.combined_bytes,
+        tickets_hash=bytes.fromhex(draw.tickets_hash),
+        ordered_ticket_ids=list(ticket_ids),
+        reserves=reserves,
+    )
+
+    # Resolve winner user_ids from the ticket rows in one query.
+    owner_rows = (
+        await session.execute(
+            select(Ticket.id, Ticket.user_id).where(
+                Ticket.id.in_(winner_ticket_ids)
+            )
+        )
+    ).all()
+    ticket_owner_map: dict[uuid.UUID, uuid.UUID] = {
+        ticket_id: user_id for ticket_id, user_id in owner_rows
+    }
+
+    now = datetime.now(UTC)
+    draw.state = next_state
+    draw.revealed_at = now
+    draw.updated_at = now
+    draw.reveal_inputs = {
+        "mode": entropy_inputs.mode,
+        "bitcoin_hash": entropy_inputs.bitcoin.block_hash,
+        "bitcoin_height": entropy_inputs.bitcoin.block_height,
+        "bitcoin_timestamp": entropy_inputs.bitcoin.block_timestamp,
+        "drand_round": entropy_inputs.drand.round,
+        "drand_randomness": entropy_inputs.drand.randomness,
+        "drand_signature": entropy_inputs.drand.signature,
+        "verified_at": entropy_inputs.verified_at.isoformat(),
+    }
+
+    winner_rows: list[DrawWinner] = []
+    for position, ticket_id in enumerate(winner_ticket_ids):
+        row = DrawWinner(
+            draw_id=draw_id,
+            position=position,
+            ticket_id=ticket_id,
+            user_id=ticket_owner_map[ticket_id],
+            is_primary=(position == 0),
+        )
+        session.add(row)
+        winner_rows.append(row)
+
+    await session.flush()
+
+    # `draw.revealed` — summary event with proof inputs.
+    await audit.append(
+        session,
+        actor_type="operator",
+        actor_id="admin.reveal_draw",
+        event_name="draw.revealed",
+        subject_type="draw",
+        subject_id=str(draw_id),
+        payload={
+            "draw_id": str(draw_id),
+            "commitment": draw.commitment,
+            "server_seed": draw.server_seed_encrypted,
+            "tickets_hash": draw.tickets_hash,
+            "ticket_count": len(ticket_ids),
+            "reserves": reserves,
+            **draw.reveal_inputs,
+        },
+    )
+
+    # One `draw.winner_selected` per winner in position order.
+    for row in winner_rows:
+        await audit.append(
+            session,
+            actor_type="operator",
+            actor_id="admin.reveal_draw",
+            event_name="draw.winner_selected",
+            subject_type="draw_winner",
+            subject_id=str(row.id),
+            payload={
+                "draw_id": str(draw_id),
+                "position": row.position,
+                "is_primary": row.is_primary,
+                "ticket_id": str(row.ticket_id),
+                "user_id_hash": hashlib.sha256(
+                    str(row.user_id).encode("utf-8")
+                ).hexdigest(),
+            },
+        )
+
+    return draw
+
+
+async def list_winners(
+    session: AsyncSession, *, draw_id: uuid.UUID
+) -> list[DrawWinner]:
+    rows = (
+        await session.execute(
+            select(DrawWinner)
+            .where(DrawWinner.draw_id == draw_id)
+            .order_by(DrawWinner.position)
+        )
+    ).scalars().all()
+    return list(rows)

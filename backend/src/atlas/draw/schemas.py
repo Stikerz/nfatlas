@@ -33,3 +33,24 @@ class DrawCloseResponse(BaseModel):
     tickets_hash: str
     close_time: datetime
     draw_time: datetime
+
+
+class DrawRevealResponse(BaseModel):
+    """Return shape from POST /draws/{id}/reveal."""
+
+    id: uuid.UUID
+    state: str
+    revealed_at: datetime
+    winner_count: int
+
+
+class WinnerSummary(BaseModel):
+    position: int
+    is_primary: bool
+    ticket_id: uuid.UUID
+    user_id: uuid.UUID
+    contact_status: str
+
+
+class WinnerList(BaseModel):
+    items: list[WinnerSummary]

@@ -14,9 +14,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Integer, String, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from atlas.db import Base
@@ -55,9 +65,49 @@ class Draw(Base):
     revealed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    reveal_inputs: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
     updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+
+
+class DrawWinner(Base):
+    __tablename__ = "draw_winners"
+    __table_args__ = (
+        CheckConstraint("position >= 0", name="position_non_negative"),
+        CheckConstraint(
+            "(position = 0) = is_primary", name="primary_at_position_zero"
+        ),
+        CheckConstraint(
+            "contact_status IN ('pending', 'contacted', 'claimed', 'declined', 'expired')",
+            name="contact_status_enum",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        server_default=text("gen_random_uuid()"),
+    )
+    draw_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("draws.id"), nullable=False
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    ticket_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("tickets.id"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=False
+    )
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    contact_status: Mapped[str] = mapped_column(
+        String, nullable=False, server_default=text("'pending'")
+    )
+    created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=text("now()")
     )
