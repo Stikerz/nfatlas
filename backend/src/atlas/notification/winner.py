@@ -55,8 +55,8 @@ async def notify_winner(
     )
 
     if user is None:
-        # Impossible: winner rows FK users, but keep the guard so a
-        # partial-delete on users doesn't crash the reveal.
+        # Impossible under the FK, but the guard means a manual data
+        # cleanup targeting the referenced row cannot crash a reveal.
         return
 
     reserve_line = "" if is_primary else (
