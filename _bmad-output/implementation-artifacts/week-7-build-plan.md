@@ -2,9 +2,23 @@
 
 **Drafted:** 2026-07-29 (Week 6 close; Week 7 kickoff on founder sign-off)
 **Drafted by:** 💻 Amelia (BMad Dev)
-**Status:** **Draft — pending founder decisions on §9 asks.**
+**Status:** **Approved 2026-07-29** — founder resolved all §9 asks (4 on recommendations, 1 deviation: 10-min demo close instead of 3-min).
 **Applies to:** V0.5 investor demo finale — the last mile.
 **Pairs with:** `v0.5-demo-plan.md §5 Week 7`, `week-6-build-plan.md` (foundation: full draw engine + proof + verifier), all wireframes.
+
+---
+
+## 0. Founder decisions (2026-07-29)
+
+| # | Ask | Decision | Impact |
+|---|---|---|---|
+| 1 | Frontend scope | **Full mobile + admin as scoped** | Mobile Flutter hero flow + Next.js admin pages + public proof + trust-story. Frontend-heavy week; Amelia + Sally split. |
+| 2 | Winner claim | **Full mobile flow** | Mobile winner screen + Claim button + confirmation. Backend endpoint + audit event. |
+| 3 | Demo timing | **10-minute close (safe)** | close_time = seed + 10min, draw_time = seed + 11min. Buffered for pitches with Q&A. Deviates from Amelia's 3-min recommendation. |
+| 4 | Screen recording | **Playwright automated** | infrastructure/scripts/record_demo.py. Fallback: OBS if Playwright setup > half day. |
+| 5 | Public proof rendering | **SSR (default)** | Next.js server-rendered per Amelia's recommendation (not asked; default adopted). |
+
+Adaeze's items in §5 (public proof PII posture, trust-story copy) still owed by Day 3.
 
 ---
 
@@ -12,7 +26,7 @@
 
 **In.**
 
-- **Demo-mode config**: `ATLAS_DEMO_MODE=true` compresses the seeded draw's `close_time` to `seed_time + 3 min` and `draw_time` to `seed_time + 4 min` so the pitch doesn't wait days. Production defaults false. Config validator refuses `demo_mode=true` when `env=production`.
+- **Demo-mode config**: `ATLAS_DEMO_MODE=true` compresses the seeded draw's `close_time` to `seed_time + 10 min` and `draw_time` to `seed_time + 11 min` so the pitch doesn't wait days (per §0 decision 3 — buffered for Q&A). Production defaults false. Config validator refuses `demo_mode=true` when `env=production`.
 - **`make demo-reset`** upgraded — wipes DB volume, re-applies all migrations, re-runs `seed_v0_5.py` (draw + questions), re-runs `bootstrap_superadmin.py`. Target: < 30s per `v0.5-demo-plan.md §6`.
 - **Fresh-clone drill v5**: `git clone && make setup && make dev && make demo-reset && make demo-open-browser` — the last target opens the public proof page + admin login in the founder's browser. Timed target < 15 min.
 - **Public proof page** (Next.js SSR at `/proof/[drawId]`) — reads `GET /proof`, renders the trust surface: commitment, revealed inputs, winners (position + user_id_hash + ticket_id short), copy-paste verifier command. The demo wow-moment.
@@ -46,7 +60,7 @@
 ### Day 1 (Mon 2026-08-11) — Demo-mode config + demo-reset + winner-claim backend
 
 - `atlas.config.demo_mode: bool = False`. Prod validator: refuses `demo_mode=true` when `env=production`.
-- `seed_v0_5.py` reads `demo_mode`: when true, sets `close_time = now + 3min`, `draw_time = now + 4min`. When false (dev/prod), keeps the current 3-day window.
+- `seed_v0_5.py` reads `demo_mode`: when true, sets `close_time = now + 10min`, `draw_time = now + 11min` (per §0 decision 3). When false (dev/prod), keeps the current 3-day window.
 - `make demo-reset` extended: wipe volume → migrate → seed → bootstrap. Timed check must land < 30s (compose start is separate).
 - `POST /api/v1/draws/{draw_id}/winners/{ticket_id}/claim` — winner-only endpoint (must be the user_id on the winner row). Marks `contact_status='claimed'`. Emits `draw.winner_claimed` audit event.
 - Migration 0010: no schema changes — reuse `draw_winners.contact_status` from W6. Skip migration this day.
@@ -236,7 +250,7 @@ Ranked by likelihood × slip-impact.
 
 ## 9. Asks to founder before Day 1 code starts
 
-Five decisions block Day 1. Recommendations below.
+**All 5 resolved 2026-07-29 — see §0.** Preserved below as historical record.
 
 1. **Frontend scope — full apps or curl-driven demo?**
    Options: (a) full mobile Flutter + admin Next.js as scoped above; (b) curl for admin ops + minimal mobile browse-only; (c) hybrid — mobile hero flow + admin curl.
