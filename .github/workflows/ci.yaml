@@ -208,6 +208,34 @@ jobs:
             echo "::error::Draw construction must go through atlas.draw.service"
             exit 1
           fi
+      - name: DrawWinner writes must go through draw.service
+        run: |
+          set -e
+          # DrawWinner rows are the trust-story anchors — a write outside
+          # atlas.draw.service.reveal_draw would let another module
+          # publish a "winner" without going through the state machine +
+          # entropy fetch + select_winners chain.
+          if grep -rnE '\bDrawWinner\s*\(' backend/src/atlas \
+              --include='*.py' \
+              --exclude-dir=draw ; then
+            echo "::error::DrawWinner writes must go through atlas.draw.service.reveal_draw"
+            exit 1
+          fi
+      - name: secrets.token_bytes discipline (ADR-006 §Stage 1)
+        run: |
+          set -e
+          # server_seed material MUST come from a cryptographic RNG. The
+          # whitelist covers atlas.draw.service.create_draw (mints
+          # server_seed at commit time). Adding a new caller is a
+          # trust-story change — explicit ci.yaml diff makes it visible.
+          matches=$(grep -rn 'secrets\.token_bytes\|secrets\.token_hex' backend/src/atlas --include='*.py' \
+              | grep -vE 'draw/service\.py:' \
+              || true)
+          if [ -n "$matches" ] ; then
+            echo "$matches"
+            echo "::error::secrets.token_bytes is restricted; add the module to the whitelist in ci.yaml if genuinely needed."
+            exit 1
+          fi
       - name: get_secret_value discipline (ADR-012)
         run: |
           set -e

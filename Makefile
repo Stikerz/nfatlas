@@ -1,4 +1,4 @@
-.PHONY: help setup dev test lint typecheck demo-reset bootstrap clean
+.PHONY: help setup dev test lint typecheck demo-reset demo-seed demo-close-reveal bootstrap clean
 
 help:
 	@echo "Atlas V0.5 — dev commands"
@@ -9,6 +9,8 @@ help:
 	@echo "  make lint          Ruff + ESLint + Flutter analyze"
 	@echo "  make typecheck     mypy + tsc"
 	@echo "  make demo-reset    Wipe DB volume and reseed identity slice"
+	@echo "  make demo-seed     Populate one active draw + 10 skill questions"
+	@echo "  make demo-close-reveal  Close + reveal the seeded draw for the demo pitch"
 	@echo "  make bootstrap     Create the seeded superadmin (Adaobi Ibe)"
 	@echo "  make clean         Stop stack, remove volumes"
 
@@ -39,6 +41,13 @@ demo-reset:
 	@until docker compose exec -T postgres pg_isready -U atlas -d atlas >/dev/null 2>&1; do sleep 1; done
 	docker compose run --rm backend alembic -c migrations/alembic.ini upgrade head
 	@echo "→ demo-reset done (identity + RBAC migrations applied)"
+
+demo-seed:
+	docker compose run --rm backend python /infrastructure/scripts/seed_v0_5.py
+
+demo-close-reveal:
+	@echo "→ closing + revealing the seeded demo draw"
+	docker compose run --rm backend python /infrastructure/scripts/demo_close_reveal.py
 
 bootstrap:
 	docker compose run --rm backend python /infrastructure/scripts/bootstrap_superadmin.py

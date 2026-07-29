@@ -14,6 +14,7 @@ from atlas.draw import reveal as reveal_algo
 from atlas.draw import service as draw_service
 from atlas.draw.models import Draw
 from atlas.draw.schemas import (
+    CreateDrawRequest,
     DrawCloseResponse,
     DrawList,
     DrawProof,
@@ -30,6 +31,7 @@ from atlas.identity.models import Session as SessionRow
 
 router = APIRouter(prefix="/api/v1/draws", tags=["draw"])
 
+_CREATE = "POST /api/v1/draws"
 _CLOSE = "POST /api/v1/draws/{id}/close"
 _REVEAL = "POST /api/v1/draws/{id}/reveal"
 
@@ -45,6 +47,48 @@ def _to_summary(row: Draw) -> DrawSummary:
         state=row.state,
         commitment=row.commitment,
     )
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=DrawSummary,
+)
+async def create_draw(
+    body: CreateDrawRequest,
+    db: AsyncSession = Depends(get_session),
+    session: SessionRow = Depends(current_session),
+    idempotency: IdempotencyGuard = Depends(idempotency_guard(endpoint=_CREATE)),
+) -> DrawSummary:
+    if idempotency.cached_response is not None:
+        return DrawSummary.model_validate(idempotency.cached_response)
+
+    if not await admin_service.is_superadmin(db, user_id=session.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "operator_role_required",
+                "message": "Creating a draw is an operator action.",
+            },
+        )
+
+    row = await draw_service.create_draw(
+        db,
+        prize_copy=body.prize_copy,
+        ticket_price_minor=body.ticket_price_minor,
+        close_time=body.close_time,
+        draw_time=body.draw_time,
+        entries_cap=body.entries_cap,
+        actor_operator_id=session.user_id,
+    )
+    response = _to_summary(row)
+    await idempotency.record(
+        db,
+        status_code=status.HTTP_201_CREATED,
+        response_body=response.model_dump(mode="json"),
+    )
+    await db.commit()
+    return response
 
 
 @router.get("", response_model=DrawList)

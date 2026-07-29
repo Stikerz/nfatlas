@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import secrets
 import uuid
 from datetime import UTC, datetime
 
@@ -47,6 +48,66 @@ class DrawNotOpenError(RuntimeError):
 class DrawStateError(RuntimeError):
     """Wrapper around state_machine.IllegalTransitionError for callers
     that want a draw-service-typed error surface."""
+
+
+async def create_draw(
+    session: AsyncSession,
+    *,
+    prize_copy: str,
+    ticket_price_minor: int,
+    close_time: datetime,
+    draw_time: datetime,
+    entries_cap: int | None = None,
+    actor_operator_id: uuid.UUID,
+) -> Draw:
+    """Mint a fresh draw in `sales_open` per week-6-build-plan §Day 5.
+
+    V0.5 collapses draft → committed → sales_open into a single insert
+    (per week-5-build-plan §0 direction: no admin-driven creation flow
+    for the earlier states). The commitment is published in the same
+    breath via the `draw.committed` audit event.
+
+    V0.5 shortcut: server_seed stored plaintext hex per week-5-build-
+    plan §0 ask 5. TODO(v1): encrypt at rest via the platform secret
+    manager before serving live users.
+    """
+    draw_id = uuid.uuid4()
+    server_seed = secrets.token_bytes(32)
+    commitment = hashlib.sha256(server_seed + draw_id.bytes).hexdigest()
+
+    draw = Draw(
+        id=draw_id,
+        prize_copy=prize_copy,
+        ticket_price_minor=ticket_price_minor,
+        currency="NGN",
+        entries_cap=entries_cap,
+        close_time=close_time,
+        draw_time=draw_time,
+        state=state_machine.DrawState.SALES_OPEN.value,
+        commitment=commitment,
+        server_seed_encrypted=server_seed.hex(),
+    )
+    session.add(draw)
+    await session.flush()
+
+    await audit.append(
+        session,
+        actor_type="operator",
+        actor_id=str(actor_operator_id),
+        event_name="draw.committed",
+        subject_type="draw",
+        subject_id=str(draw_id),
+        payload={
+            "draw_id": str(draw_id),
+            "commitment": commitment,
+            "prize_copy": prize_copy,
+            "ticket_price_minor": ticket_price_minor,
+            "close_time": close_time.astimezone(UTC).isoformat(),
+            "draw_time": draw_time.astimezone(UTC).isoformat(),
+            "entries_cap": entries_cap,
+        },
+    )
+    return draw
 
 
 async def get(session: AsyncSession, *, draw_id: uuid.UUID) -> Draw:

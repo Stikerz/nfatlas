@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DrawSummary(BaseModel):
@@ -23,6 +23,18 @@ class DrawSummary(BaseModel):
 
 class DrawList(BaseModel):
     items: list[DrawSummary]
+
+
+class CreateDrawRequest(BaseModel):
+    """POST /api/v1/draws — admin creates a fresh sales_open draw."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prize_copy: str = Field(min_length=1, max_length=500)
+    ticket_price_minor: int = Field(gt=0)
+    close_time: datetime
+    draw_time: datetime
+    entries_cap: int | None = Field(default=None, gt=0)
 
 
 class DrawCloseResponse(BaseModel):
