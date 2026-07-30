@@ -69,6 +69,7 @@ services:
       ATLAS_PAYSTACK_PUBLIC_KEY: ${ATLAS_PAYSTACK_PUBLIC_KEY:-}
       ATLAS_PAYSTACK_WEBHOOK_SECRET: ${ATLAS_PAYSTACK_WEBHOOK_SECRET:-dev_paystack_webhook_secret_do_not_use_in_prod_00}
       ATLAS_DRAW_ENTROPY_MODE: ${ATLAS_DRAW_ENTROPY_MODE:-stub}
+      ATLAS_DEMO_MODE: ${ATLAS_DEMO_MODE:-false}
     volumes:
       - ./infrastructure:/infrastructure:ro
     ports:

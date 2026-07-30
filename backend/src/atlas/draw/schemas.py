@@ -64,6 +64,14 @@ class WinnerSummary(BaseModel):
     contact_status: str
 
 
+class ClaimResponse(BaseModel):
+    draw_id: uuid.UUID
+    ticket_id: uuid.UUID
+    position: int
+    is_primary: bool
+    contact_status: str
+
+
 class WinnerList(BaseModel):
     items: list[WinnerSummary]
 

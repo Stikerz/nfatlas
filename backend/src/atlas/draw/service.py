@@ -50,6 +50,18 @@ class DrawStateError(RuntimeError):
     that want a draw-service-typed error surface."""
 
 
+class WinnerNotFoundError(LookupError):
+    """No draw_winners row for (draw_id, ticket_id)."""
+
+
+class WinnerForbiddenError(PermissionError):
+    """Caller is not the winning user on the requested draw_winner row."""
+
+
+class WinnerAlreadyClaimedError(RuntimeError):
+    """contact_status is already 'claimed' (or beyond)."""
+
+
 async def create_draw(
     session: AsyncSession,
     *,
@@ -363,6 +375,55 @@ async def list_winners(
         )
     ).scalars().all()
     return list(rows)
+
+
+async def claim_prize(
+    session: AsyncSession,
+    *,
+    draw_id: uuid.UUID,
+    ticket_id: uuid.UUID,
+    claimant_user_id: uuid.UUID,
+) -> DrawWinner:
+    """Winner marks their prize as claimed. V0.5 minimum: state
+    advances `pending → claimed` (skipping the operator `contacted`
+    intermediate — Week 7 UX ties directly).
+
+    Ownership: caller must be the user_id on the draw_winners row.
+    """
+    winner = (
+        await session.execute(
+            select(DrawWinner).where(
+                DrawWinner.draw_id == draw_id,
+                DrawWinner.ticket_id == ticket_id,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if winner is None:
+        raise WinnerNotFoundError(f"no winner for draw={draw_id} ticket={ticket_id}")
+    if winner.user_id != claimant_user_id:
+        raise WinnerForbiddenError(str(winner.id))
+    if winner.contact_status in ("claimed", "declined", "expired"):
+        raise WinnerAlreadyClaimedError(winner.contact_status)
+
+    winner.contact_status = "claimed"
+    await session.flush()
+
+    await audit.append(
+        session,
+        actor_type="user",
+        actor_id=str(claimant_user_id),
+        event_name="draw.winner_claimed",
+        subject_type="draw_winner",
+        subject_id=str(winner.id),
+        payload={
+            "draw_id": str(draw_id),
+            "ticket_id": str(ticket_id),
+            "position": winner.position,
+            "is_primary": winner.is_primary,
+        },
+    )
+    return winner
 
 
 async def ordered_ticket_ids(

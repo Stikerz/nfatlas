@@ -35,12 +35,17 @@ typecheck:
 	cd admin && pnpm typecheck
 
 demo-reset:
-	docker compose down -v
-	docker compose up -d postgres redis mailhog
-	@echo "→ waiting for postgres to become healthy…"
-	@until docker compose exec -T postgres pg_isready -U atlas -d atlas >/dev/null 2>&1; do sleep 1; done
-	docker compose run --rm backend alembic -c migrations/alembic.ini upgrade head
-	@echo "→ demo-reset done (identity + RBAC migrations applied)"
+	@echo "→ full demo reset: wipe volume + migrate + seed + bootstrap"
+	@START=$$(date +%s); \
+	docker compose down -v >/dev/null 2>&1; \
+	docker compose up -d postgres redis mailhog >/dev/null 2>&1; \
+	echo "→ waiting for postgres to become healthy…"; \
+	until docker compose exec -T postgres pg_isready -U atlas -d atlas >/dev/null 2>&1; do sleep 1; done; \
+	docker compose run --rm backend alembic -c migrations/alembic.ini upgrade head; \
+	docker compose run --rm backend python /infrastructure/scripts/seed_v0_5.py; \
+	docker compose run --rm backend python /infrastructure/scripts/bootstrap_superadmin.py; \
+	END=$$(date +%s); \
+	echo "→ demo-reset done in $$((END - START))s (target: < 30s)"
 
 demo-seed:
 	docker compose run --rm backend python /infrastructure/scripts/seed_v0_5.py

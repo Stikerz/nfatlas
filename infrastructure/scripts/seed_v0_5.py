@@ -41,6 +41,7 @@ sys.path.insert(0, str(repo_root / "backend" / "src"))
 from sqlalchemy import select  # noqa: E402
 from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: E402
 
+from atlas.config import get_settings  # noqa: E402
 from atlas.db import get_sessionmaker  # noqa: E402
 from atlas.draw.models import Draw  # noqa: E402
 from atlas.skill.models import SkillQuestion, SkillQuestionOption  # noqa: E402
@@ -113,8 +114,15 @@ def _commitment(server_seed: bytes, draw_id: uuid.UUID) -> str:
 async def _seed_draw(session) -> Draw:
     """Idempotent upsert of the demo draw."""
     now = datetime.now(UTC)
-    close_time = now + timedelta(days=3)
-    draw_time = close_time + timedelta(hours=1)
+    # Founder decision 2026-07-29 §0.3: demo_mode compresses to 10-min
+    # close + 1-min buffer so pitches don't wait days. Non-demo runs
+    # keep the 3-day window.
+    if get_settings().demo_mode:
+        close_time = now + timedelta(minutes=10)
+        draw_time = now + timedelta(minutes=11)
+    else:
+        close_time = now + timedelta(days=3)
+        draw_time = close_time + timedelta(hours=1)
 
     # Deterministic server_seed per DEMO_DRAW_ID so the commitment stays
     # stable across re-seeds (a real reveal would rotate this per draw).
@@ -195,12 +203,15 @@ async def _main_async() -> None:
         question_count = await _seed_questions(session)
         await session.commit()
 
+    mode_hint = " (demo-mode compressed)" if get_settings().demo_mode else ""
     sys.stdout.write(
         f"seeded draw {draw.id}\n"
         f"  prize: {draw.prize_copy}\n"
         f"  ticket_price: ₦{draw.ticket_price_minor / 100:,.2f}\n"
         f"  state: {draw.state}\n"
         f"  commitment: {draw.commitment}\n"
+        f"  close_time: {draw.close_time.isoformat()}{mode_hint}\n"
+        f"  draw_time:  {draw.draw_time.isoformat()}\n"
         f"seeded {question_count} skill questions\n"
     )
 

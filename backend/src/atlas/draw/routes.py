@@ -14,6 +14,7 @@ from atlas.draw import reveal as reveal_algo
 from atlas.draw import service as draw_service
 from atlas.draw.models import Draw
 from atlas.draw.schemas import (
+    ClaimResponse,
     CreateDrawRequest,
     DrawCloseResponse,
     DrawList,
@@ -34,6 +35,7 @@ router = APIRouter(prefix="/api/v1/draws", tags=["draw"])
 _CREATE = "POST /api/v1/draws"
 _CLOSE = "POST /api/v1/draws/{id}/close"
 _REVEAL = "POST /api/v1/draws/{id}/reveal"
+_CLAIM = "POST /api/v1/draws/{id}/winners/{ticket_id}/claim"
 
 
 def _to_summary(row: Draw) -> DrawSummary:
@@ -343,3 +345,57 @@ async def get_winners(
             for r in rows
         ]
     )
+
+
+@router.post(
+    "/{draw_id}/winners/{ticket_id}/claim",
+    status_code=status.HTTP_200_OK,
+    response_model=ClaimResponse,
+)
+async def claim_prize(
+    draw_id: uuid.UUID,
+    ticket_id: uuid.UUID,
+    db: AsyncSession = Depends(get_session),
+    session: SessionRow = Depends(current_session),
+    idempotency: IdempotencyGuard = Depends(idempotency_guard(endpoint=_CLAIM)),
+) -> ClaimResponse:
+    if idempotency.cached_response is not None:
+        return ClaimResponse.model_validate(idempotency.cached_response)
+
+    try:
+        winner = await draw_service.claim_prize(
+            db,
+            draw_id=draw_id,
+            ticket_id=ticket_id,
+            claimant_user_id=session.user_id,
+        )
+    except draw_service.WinnerNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "winner_not_found", "message": "Unknown winner for this draw + ticket."},
+        ) from exc
+    except draw_service.WinnerForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": "winner_forbidden", "message": "This prize is not yours to claim."},
+        ) from exc
+    except draw_service.WinnerAlreadyClaimedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "winner_already_settled", "message": f"Prize already in state {exc.args[0]!r}."},
+        ) from exc
+
+    response = ClaimResponse(
+        draw_id=draw_id,
+        ticket_id=ticket_id,
+        position=winner.position,
+        is_primary=winner.is_primary,
+        contact_status=winner.contact_status,
+    )
+    await idempotency.record(
+        db,
+        status_code=status.HTTP_200_OK,
+        response_body=response.model_dump(mode="json"),
+    )
+    await db.commit()
+    return response

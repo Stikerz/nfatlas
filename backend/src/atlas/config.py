@@ -85,6 +85,12 @@ class Settings(BaseSettings):
     # verify. Optional today (V0.5 trusts drand's HTTPS endpoint).
     drand_group_public_key: str | None = None
 
+    # --- Demo mode (Week 7) -----------------------------------------------
+    # Founder decision 2026-07-29 §0.3: when true, seed_v0_5.py compresses
+    # the seeded draw's close/draw times to now+10min / now+11min so the
+    # pitch doesn't wait days. Production must be false (validated).
+    demo_mode: bool = False
+
     @model_validator(mode="after")
     def _prod_safety(self) -> Settings:
         if self.env == "production":
@@ -107,6 +113,11 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "ATLAS_DRAW_ENTROPY_MODE must be 'live' in production "
                     "(V0.5 stub for demo-offline runs only)."
+                )
+            if self.demo_mode:
+                raise ValueError(
+                    "ATLAS_DEMO_MODE must be false in production "
+                    "(V0.5 demo-timing shortcut only)."
                 )
         if not self.paystack_stub_mode and self.paystack_secret_key is None:
             raise ValueError(
