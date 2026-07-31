@@ -9,8 +9,10 @@ import '../../design/tokens/typography.dart';
 import '../draws/draws_api.dart';
 import '../identity/identity_controller.dart';
 import '../identity/register_screen.dart';
+import '../skill/skill_question_screen.dart';
 import '../tickets/tickets_api.dart';
 import '../wallet/wallet_api.dart';
+import '../winners/winner_claim_screen.dart';
 
 /// Home shell — tabs render distinct feature panels in-place.
 ///
@@ -203,9 +205,48 @@ class _AccountPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _EmptyPanel(
-      title: 'Account',
-      body: 'Profile, self-exclusion, and winner-claim history land here on Day 5.',
+    return Padding(
+      padding: const EdgeInsets.all(AtlasSpace.s600),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Account',
+            style: AtlasType.displaySection.copyWith(
+              color: AtlasColors.brandPrimary,
+            ),
+          ),
+          const SizedBox(height: AtlasSpace.s600),
+          Card(
+            color: AtlasColors.surfaceElevated,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AtlasSpace.s300),
+              side: BorderSide(color: AtlasColors.dividerHairline),
+            ),
+            child: ListTile(
+              leading: Icon(Icons.emoji_events_outlined,
+                  color: AtlasColors.brandPrimary),
+              title: const Text('Your wins'),
+              subtitle: const Text('Claim any prize you have won'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => const WinnerClaimScreen(),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: AtlasSpace.s400),
+          Text(
+            'Self-exclusion + profile settings land in V1.',
+            textAlign: TextAlign.center,
+            style: AtlasType.bodySmall.copyWith(
+              color: AtlasColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -223,8 +264,18 @@ class _DrawCard extends StatelessWidget {
     final closeLabel = closeIn.isNegative
         ? 'closed'
         : 'closes in ${_humanDelta(closeIn)}';
+    final canEnter = draw.state == 'sales_open';
 
-    return Container(
+    return InkWell(
+      onTap: canEnter
+          ? () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => SkillQuestionScreen(draw: draw),
+                ),
+              )
+          : null,
+      borderRadius: BorderRadius.circular(AtlasSpace.s300),
+      child: Container(
       padding: const EdgeInsets.all(AtlasSpace.s500),
       decoration: BoxDecoration(
         color: AtlasColors.surfaceElevated,
@@ -269,8 +320,18 @@ class _DrawCard extends StatelessWidget {
               fontSize: 12,
             ),
           ),
+          if (canEnter) ...[
+            const SizedBox(height: AtlasSpace.s400),
+            Text(
+              'TAP TO ENTER →',
+              style: AtlasType.bodySmall.copyWith(
+                color: AtlasColors.brandPrimary,
+              ),
+            ),
+          ],
         ],
       ),
+    ),
     );
   }
 

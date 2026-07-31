@@ -16,6 +16,7 @@ dependencies:
   flutter_secure_storage: ^9.2.2  # Session-token storage (Day 4)
   intl: ^0.19.0                   # Date formatting for DOB / timestamps
   uuid: ^4.5.1                    # Idempotency-Key UUIDs (Day 4)
+  url_launcher: ^6.3.1            # Paystack checkout in external browser (W7)
 
 dev_dependencies:
   flutter_test:

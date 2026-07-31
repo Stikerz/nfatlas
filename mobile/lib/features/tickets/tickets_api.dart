@@ -18,7 +18,45 @@ class TicketsApi {
         .cast<Map<String, dynamic>>();
     return items.map(TicketSummary.fromJson).toList();
   }
+
+  Future<PurchaseIntent> purchase({
+    required String drawId,
+    required String entitlementId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/tickets/purchase',
+      data: {'draw_id': drawId, 'entitlement_id': entitlementId},
+    );
+    return PurchaseIntent.fromJson(response.data!);
+  }
 }
+
+class PurchaseIntent {
+  const PurchaseIntent({
+    required this.paymentIntentId,
+    required this.vendorReference,
+    required this.checkoutUrl,
+    required this.amountMinor,
+    required this.currency,
+  });
+
+  factory PurchaseIntent.fromJson(Map<String, dynamic> json) {
+    return PurchaseIntent(
+      paymentIntentId: json['payment_intent_id'] as String,
+      vendorReference: json['vendor_reference'] as String,
+      checkoutUrl: json['checkout_url'] as String?,
+      amountMinor: json['amount_minor'] as int,
+      currency: json['currency'] as String,
+    );
+  }
+
+  final String paymentIntentId;
+  final String vendorReference;
+  final String? checkoutUrl;
+  final int amountMinor;
+  final String currency;
+}
+
 
 class TicketSummary {
   const TicketSummary({
