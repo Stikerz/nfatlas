@@ -8,6 +8,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from atlas import __version__
+from atlas.audit_log.routes import router as audit_log_router
 from atlas.config import get_settings
 from atlas.draw.routes import router as draw_router
 from atlas.identity.routes import router as identity_router
@@ -35,3 +36,4 @@ app.include_router(draw_router)
 app.include_router(skill_router)
 app.include_router(ticket_router)
 app.include_router(wallet_router)
+app.include_router(audit_log_router)
