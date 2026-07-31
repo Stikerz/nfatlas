@@ -22,6 +22,22 @@ set -euo pipefail
 API="${ATLAS_API_BASE:-http://localhost:8000}"
 ADMIN_EMAIL="${ATLAS_SUPERADMIN_EMAIL:-adaobi.ibe@atlas.dev}"
 ADMIN_PASSWORD="${ATLAS_SUPERADMIN_PASSWORD:-dev_bootstrap_password_change_me_00}"
+WEBHOOK_SECRET="${ATLAS_PAYSTACK_WEBHOOK_SECRET:-local_dev_paystack_webhook_secret_do_not_use_in_prod}"
+
+# Python that has atlas + pydantic installed. Falls back to system
+# python3 when the venv isn't available (e.g. inside the backend
+# Docker container which pip-installed everything globally).
+if [ -x backend/.venv/bin/python ]; then
+  PYTHON=backend/.venv/bin/python
+else
+  PYTHON=python3
+fi
+
+sign_paystack() {
+  # HMAC-SHA-512 hex of the body with the webhook secret. Portable
+  # (openssl is everywhere), no dep on the atlas Python env.
+  printf '%s' "$1" | openssl dgst -sha512 -hmac "$WEBHOOK_SECRET" | awk '{print $2}'
+}
 
 step=0
 say() {
@@ -46,100 +62,128 @@ random_email() { python3 -c 'import uuid;print(f"kemi-{uuid.uuid4().hex[:8]}@exa
 
 jq_or_die
 
-# ── Step 1: register a fresh consumer ────────────────────────────────
-say 'Register a fresh consumer'
-CONSUMER_EMAIL=$(random_email)
-CONSUMER_PHONE=$(random_phone)
-CONSUMER_PASSWORD='correct horse battery staple'
-REG_RESPONSE=$(curl -sS -X POST "$API/api/v1/users" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"email\":\"$CONSUMER_EMAIL\",\"phone_e164\":\"$CONSUMER_PHONE\",\"date_of_birth\":\"1993-03-12\",\"terms_accepted\":true}")
-USER_ID=$(echo "$REG_RESPONSE" | jq -r '.user_id // empty')
-[ -n "$USER_ID" ] || fail "register failed: $REG_RESPONSE"
+# Register + verify + password + login for a single consumer. Sets
+# globals CONSUMER_EMAIL, CONSUMER_TOKEN.
+register_consumer() {
+  CONSUMER_EMAIL=$(random_email)
+  local phone
+  phone=$(random_phone)
+  local password='correct horse battery staple'
+  local reg_response
+  reg_response=$(curl -sS -X POST "$API/api/v1/users" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"email\":\"$CONSUMER_EMAIL\",\"phone_e164\":\"$phone\",\"date_of_birth\":\"1993-03-12\",\"terms_accepted\":true}")
+  local user_id
+  user_id=$(echo "$reg_response" | jq -r '.user_id // empty')
+  [ -n "$user_id" ] || fail "register failed: $reg_response"
 
-# ── Step 2: issue + verify OTP ───────────────────────────────────────
-say 'Issue + verify registration OTP (via mailhog)'
-curl -sS -X POST "$API/api/v1/otps" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"user_id\":\"$USER_ID\",\"purpose\":\"registration\"}" >/dev/null
-sleep 1
-CODE=$(curl -sS 'http://localhost:8025/api/v2/messages' \
-  | jq -r '.items[0].Content.Body' \
-  | grep -oE '[0-9]{6}' | head -1)
-[ -n "$CODE" ] || fail 'no OTP found in mailhog'
-curl -sS -X POST "$API/api/v1/otps/verify" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"user_id\":\"$USER_ID\",\"purpose\":\"registration\",\"code\":\"$CODE\"}" >/dev/null
+  curl -sS -X POST "$API/api/v1/otps" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"user_id\":\"$user_id\",\"purpose\":\"registration\"}" >/dev/null
+  sleep 1
+  # Filter mailhog by recipient — items[0] alone races across the
+  # multi-consumer loop and can pick the previous user's OTP.
+  # mailhog's Mailbox field keeps the leading `+` so match on the
+  # full phone_e164.
+  local code
+  code=$(curl -sS 'http://localhost:8025/api/v2/messages' \
+    | jq -r --arg addr "$phone" \
+        '[.items[] | select(.To[0].Mailbox==$addr)] | .[0].Content.Body' \
+    | grep -oE '[0-9]{6}' | head -1)
+  [ -n "$code" ] || fail "no OTP found in mailhog for phone $phone"
+  curl -sS -X POST "$API/api/v1/otps/verify" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"user_id\":\"$user_id\",\"purpose\":\"registration\",\"code\":\"$code\"}" >/dev/null
 
-# ── Step 3: set password ─────────────────────────────────────────────
-say 'Set password + login'
-curl -sS -X POST "$API/api/v1/users/$USER_ID/password" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"password\":\"$CONSUMER_PASSWORD\"}" >/dev/null
+  curl -sS -X POST "$API/api/v1/users/$user_id/password" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"password\":\"$password\"}" >/dev/null
 
-LOGIN_RESPONSE=$(curl -sS -X POST "$API/api/v1/sessions" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"email\":\"$CONSUMER_EMAIL\",\"password\":\"$CONSUMER_PASSWORD\"}")
-CONSUMER_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.access_token // empty')
-[ -n "$CONSUMER_TOKEN" ] || fail "login failed: $LOGIN_RESPONSE"
+  local login_response
+  login_response=$(curl -sS -X POST "$API/api/v1/sessions" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"email\":\"$CONSUMER_EMAIL\",\"password\":\"$password\"}")
+  CONSUMER_TOKEN=$(echo "$login_response" | jq -r '.access_token // empty')
+  [ -n "$CONSUMER_TOKEN" ] || fail "login failed: $login_response"
+}
 
-# ── Step 4: browse active draw ───────────────────────────────────────
+# Answer the skill question correctly for the current CONSUMER_TOKEN,
+# purchase a ticket, feed a signed webhook. May be called multiple
+# times per draw to build the pool.
+buy_ticket_for_current_consumer() {
+  local draw_id="$1"
+  local question_json
+  question_json=$(curl -sS "$API/api/v1/draws/$draw_id/skill-questions/next" \
+    -H "Authorization: Bearer $CONSUMER_TOKEN")
+  local attempt_id
+  attempt_id=$(echo "$question_json" | jq -r '.attempt_id')
+  local correct_id
+  # Every seeded question has "correct" (or a known-correct choice) — pick it.
+  correct_id=$(echo "$question_json" | jq -r '.options[] | select(.text=="Abuja" or .text=="Green" or .text=="60" or .text=="144" or .text=="Mars" or .text=="0" or .text=="7" or .text=="Mandarin Chinese" or .text=="Pound Sterling" or .text=="9") | .id' | head -1)
+  [ -n "$correct_id" ] || fail "no known-correct option in question: $question_json"
+  curl -sS -X POST "$API/api/v1/skill-questions/attempts/$attempt_id/answer" \
+    -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $CONSUMER_TOKEN" \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"option_id\":\"$correct_id\"}" >/dev/null
+
+  local purchase
+  purchase=$(curl -sS -X POST "$API/api/v1/tickets/purchase" \
+    -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $CONSUMER_TOKEN" \
+    -H "Idempotency-Key: $(random_uuid)" \
+    -d "{\"draw_id\":\"$draw_id\",\"entitlement_id\":\"$attempt_id\"}")
+  local vendor_ref amount
+  vendor_ref=$(echo "$purchase" | jq -r '.vendor_reference // empty')
+  amount=$(echo "$purchase" | jq -r '.amount_minor // empty')
+  [ -n "$vendor_ref" ] && [ -n "$amount" ] || fail "purchase failed: $purchase"
+
+  local body sig
+  body="{\"event\":\"charge.success\",\"data\":{\"reference\":\"$vendor_ref\",\"amount\":$amount,\"currency\":\"NGN\",\"status\":\"success\",\"channel\":\"card\",\"fees\":10000,\"customer\":{\"email\":\"$CONSUMER_EMAIL\"}}}"
+  sig=$(sign_paystack "$body")
+  curl -sS -X POST "$API/api/v1/payments/webhooks/paystack" \
+    -H "x-paystack-signature: $sig" \
+    -H 'Content-Type: application/json' \
+    -d "$body" >/dev/null
+}
+
+# ── Step 1: browse active draw ───────────────────────────────────────
 say 'Browse active draw + verify commitment surfaces'
 DRAW_ID=$(curl -sS "$API/api/v1/draws" | jq -r '.items[0].id // empty')
 [ -n "$DRAW_ID" ] || fail 'no active draw — run make demo-seed first'
 COMMITMENT=$(curl -sS "$API/api/v1/draws/$DRAW_ID" | jq -r '.commitment')
 [ "${#COMMITMENT}" -eq 64 ] || fail "commitment not sha-256 hex: $COMMITMENT"
 
-# ── Step 5: wallet chip reads 0 ─────────────────────────────────────
-say 'Wallet chip reads 0 for a fresh consumer'
-BAL=$(curl -sS "$API/api/v1/users/me/wallet" \
-  -H "Authorization: Bearer $CONSUMER_TOKEN" | jq -r '.balance_minor')
-[ "$BAL" = '0' ] || fail "wallet balance was $BAL not 0"
+# ── Steps 2-8: six consumers register + buy tickets ─────────────────
+# reveal_draw defaults to reserves=5, so we need 1 primary + 5 reserves
+# = 6 tickets in the pool. The rehearsal registers six consumers so the
+# demo can go straight from "sales open" to "close + reveal".
+say 'Register 6 consumers + each buys a paid ticket via signed webhook'
+for i in 1 2 3 4 5 6; do
+  register_consumer
+  # First consumer sanity-checks wallet chip reads 0.
+  if [ "$i" -eq 1 ]; then
+    BAL=$(curl -sS "$API/api/v1/users/me/wallet" \
+      -H "Authorization: Bearer $CONSUMER_TOKEN" | jq -r '.balance_minor')
+    [ "$BAL" = '0' ] || fail "wallet balance was $BAL not 0"
+    LAST_CONSUMER_TOKEN="$CONSUMER_TOKEN"
+    LAST_CONSUMER_EMAIL="$CONSUMER_EMAIL"
+  fi
+  buy_ticket_for_current_consumer "$DRAW_ID"
+  printf '  consumer %d: %s\n' "$i" "$CONSUMER_EMAIL"
+done
 
-# ── Step 6: skill question ──────────────────────────────────────────
-say 'Fetch skill question + answer correctly'
-QUESTION_JSON=$(curl -sS "$API/api/v1/draws/$DRAW_ID/skill-questions/next" \
-  -H "Authorization: Bearer $CONSUMER_TOKEN")
-ATTEMPT_ID=$(echo "$QUESTION_JSON" | jq -r '.attempt_id')
-# Demo seed uses "correct" as the answer text.
-CORRECT_ID=$(echo "$QUESTION_JSON" | jq -r '.options[] | select(.text=="Abuja" or .text=="Green" or .text=="60" or .text=="144" or .text=="Mars" or .text=="0" or .text=="7" or .text=="Mandarin Chinese" or .text=="Pound Sterling" or .text=="9") | .id' | head -1)
-[ -n "$CORRECT_ID" ] || fail "no known-correct option in question: $QUESTION_JSON"
-ANSWER=$(curl -sS -X POST "$API/api/v1/skill-questions/attempts/$ATTEMPT_ID/answer" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CONSUMER_TOKEN" \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"option_id\":\"$CORRECT_ID\"}")
-[ "$(echo "$ANSWER" | jq -r '.is_correct')" = 'true' ] || fail "expected correct, got: $ANSWER"
-
-# ── Step 7: purchase intent + webhook credit ────────────────────────
-say 'Purchase ticket + simulate signed Paystack webhook'
-PURCHASE=$(curl -sS -X POST "$API/api/v1/tickets/purchase" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $CONSUMER_TOKEN" \
-  -H "Idempotency-Key: $(random_uuid)" \
-  -d "{\"draw_id\":\"$DRAW_ID\",\"entitlement_id\":\"$ATTEMPT_ID\"}")
-VENDOR_REF=$(echo "$PURCHASE" | jq -r '.vendor_reference')
-AMOUNT=$(echo "$PURCHASE" | jq -r '.amount_minor')
-[ -n "$VENDOR_REF" ] || fail "purchase failed: $PURCHASE"
-
-BODY="{\"event\":\"charge.success\",\"data\":{\"reference\":\"$VENDOR_REF\",\"amount\":$AMOUNT,\"currency\":\"NGN\",\"status\":\"success\",\"channel\":\"card\",\"fees\":10000,\"customer\":{\"email\":\"$CONSUMER_EMAIL\"}}}"
-SIG=$(printf '%s' "$BODY" | python3 infrastructure/scripts/sign_paystack_webhook.py)
-curl -sS -X POST "$API/api/v1/payments/webhooks/paystack" \
-  -H "x-paystack-signature: $SIG" \
-  -H 'Content-Type: application/json' \
-  -d "$BODY" >/dev/null
-
-# ── Step 8: ticket shows up ─────────────────────────────────────────
-say 'Ticket lands in /tickets/me'
+# ── Step 9: sanity — first consumer's ticket landed ────────────────
+say 'First consumer sees their ticket in /tickets/me'
 MY_TICKETS=$(curl -sS "$API/api/v1/tickets/me" \
-  -H "Authorization: Bearer $CONSUMER_TOKEN")
+  -H "Authorization: Bearer $LAST_CONSUMER_TOKEN")
 TICKET_ID=$(echo "$MY_TICKETS" | jq -r '.items[0].id // empty')
-[ -n "$TICKET_ID" ] || fail "no ticket minted: $MY_TICKETS"
+[ -n "$TICKET_ID" ] || fail "no ticket minted for first consumer: $MY_TICKETS"
 
 # ── Step 9: admin login ─────────────────────────────────────────────
 say 'Admin login'
@@ -175,7 +219,7 @@ SERVER_SEED=$(echo "$PROOF" | jq -r '.server_seed // empty')
 # ── Step 13: verifier CLI reproduces the winner ─────────────────────
 say 'verify_draw.py reproduces the same winner from the proof'
 echo "$PROOF" > /tmp/atlas-proof.json
-python3 backend/tools/verify_draw.py --proof /tmp/atlas-proof.json > /tmp/verify-output.txt
+"$PYTHON" backend/tools/verify_draw.py --proof /tmp/atlas-proof.json > /tmp/verify-output.txt
 grep -q '^MATCH' /tmp/verify-output.txt || fail "verifier did not report MATCH:\n$(cat /tmp/verify-output.txt)"
 
 # ── Step 14: audit-log chain intact ────────────────────────────────
