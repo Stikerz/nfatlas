@@ -227,8 +227,10 @@ class _AccountPanel extends StatelessWidget {
               side: const BorderSide(color: AtlasColors.dividerHairline),
             ),
             child: ListTile(
-              leading: const Icon(Icons.emoji_events_outlined,
-                  color: AtlasColors.brandPrimary),
+              leading: const Icon(
+                Icons.emoji_events_outlined,
+                color: AtlasColors.brandPrimary,
+              ),
               title: const Text('Your wins'),
               subtitle: const Text('Claim any prize you have won'),
               trailing: const Icon(Icons.chevron_right),
