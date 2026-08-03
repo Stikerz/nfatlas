@@ -202,7 +202,7 @@ class _SkillQuestionScreenState extends ConsumerState<SkillQuestionScreen> {
           padding: const EdgeInsets.all(AtlasSpace.s400),
           decoration: BoxDecoration(
             color: selected
-                ? AtlasColors.brandPrimary.withOpacity(0.08)
+                ? AtlasColors.brandPrimary.withValues(alpha: 0.08)
                 : AtlasColors.surfaceElevated,
             border: Border.all(
               color: selected
@@ -267,8 +267,11 @@ class _CorrectPanel extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.check_circle,
-              color: AtlasColors.stateSuccess, size: 64),
+          const Icon(
+            Icons.check_circle,
+            color: AtlasColors.stateSuccess,
+            size: 64,
+          ),
           const SizedBox(height: AtlasSpace.s400),
           Text('Correct answer', style: AtlasType.displaySection),
           const SizedBox(height: AtlasSpace.s300),

@@ -169,7 +169,7 @@ class _PrimaryButton extends StatelessWidget {
       return Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AtlasRadius.medium),
-          color: AtlasColors.stateAttention.withOpacity(0.12),
+          color: AtlasColors.stateAttention.withValues(alpha: 0.12),
         ),
         child: button,
       );

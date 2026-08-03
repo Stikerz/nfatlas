@@ -233,8 +233,11 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.emoji_events_outlined,
-                color: AtlasColors.textSecondary, size: 64),
+            const Icon(
+              Icons.emoji_events_outlined,
+              color: AtlasColors.textSecondary,
+              size: 64,
+            ),
             const SizedBox(height: AtlasSpace.s400),
             Text('No wins yet', style: AtlasType.displaySection),
             const SizedBox(height: AtlasSpace.s300),

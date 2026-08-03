@@ -42,12 +42,18 @@ class AtlasToast {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (variant == AtlasToastVariant.success) ...[
-                const Icon(Icons.check_circle,
-                    size: 16, color: AtlasColors.stateSuccess),
+                const Icon(
+                  Icons.check_circle,
+                  size: 16,
+                  color: AtlasColors.stateSuccess,
+                ),
                 const SizedBox(width: AtlasSpace.s200),
               ] else if (variant == AtlasToastVariant.attention) ...[
-                const Icon(Icons.warning_amber_rounded,
-                    size: 16, color: AtlasColors.stateAttention),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  size: 16,
+                  color: AtlasColors.stateAttention,
+                ),
                 const SizedBox(width: AtlasSpace.s200),
               ],
               Flexible(

@@ -63,7 +63,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           AtlasBottomNavItem(icon: Icons.home_outlined, label: 'HOME'),
           AtlasBottomNavItem(icon: Icons.emoji_events_outlined, label: 'DRAWS'),
           AtlasBottomNavItem(
-              icon: Icons.confirmation_number_outlined, label: 'TICKETS'),
+            icon: Icons.confirmation_number_outlined,
+            label: 'TICKETS',
+          ),
           AtlasBottomNavItem(icon: Icons.person_outline, label: 'ACCOUNT'),
         ],
       ),
@@ -106,7 +108,7 @@ class _WalletChip extends ConsumerWidget {
             vertical: AtlasSpace.s100,
           ),
           decoration: BoxDecoration(
-            color: AtlasColors.brandAccent.withOpacity(0.14),
+            color: AtlasColors.brandAccent.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(999),
           ),
           child: Text(
@@ -134,7 +136,7 @@ class _HomePanel extends ConsumerWidget {
         error: (err, _) => _ErrorPanel(message: 'Could not load active draw: $err'),
         data: (draws) {
           if (draws.isEmpty) {
-            return _EmptyPanel(
+            return const _EmptyPanel(
               title: 'No active draw',
               body: 'The next draw will appear here as soon as the operator opens it.',
             );
@@ -157,7 +159,7 @@ class _DrawsPanel extends ConsumerWidget {
       error: (err, _) => _ErrorPanel(message: 'Could not load draws: $err'),
       data: (draws) {
         if (draws.isEmpty) {
-          return _EmptyPanel(
+          return const _EmptyPanel(
             title: 'No draws right now',
             body: 'Check back after the next commit-reveal cycle.',
           );
@@ -184,7 +186,7 @@ class _TicketsPanel extends ConsumerWidget {
       error: (err, _) => _ErrorPanel(message: 'Could not load tickets: $err'),
       data: (tickets) {
         if (tickets.isEmpty) {
-          return _EmptyPanel(
+          return const _EmptyPanel(
             title: 'No tickets yet',
             body: 'Enter an active draw to get your first ticket.',
           );
@@ -222,10 +224,10 @@ class _AccountPanel extends StatelessWidget {
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AtlasSpace.s300),
-              side: BorderSide(color: AtlasColors.dividerHairline),
+              side: const BorderSide(color: AtlasColors.dividerHairline),
             ),
             child: ListTile(
-              leading: Icon(Icons.emoji_events_outlined,
+              leading: const Icon(Icons.emoji_events_outlined,
                   color: AtlasColors.brandPrimary),
               title: const Text('Your wins'),
               subtitle: const Text('Claim any prize you have won'),
@@ -361,8 +363,8 @@ class _TicketRow extends StatelessWidget {
           ),
           decoration: BoxDecoration(
             color: isFree
-                ? AtlasColors.brandAccent.withOpacity(0.14)
-                : AtlasColors.brandPrimary.withOpacity(0.14),
+                ? AtlasColors.brandAccent.withValues(alpha: 0.14)
+                : AtlasColors.brandPrimary.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(AtlasSpace.s100),
           ),
           child: Text(

@@ -14,12 +14,12 @@ class AtlasElevation {
   /// Raised card — draw cards, ticket cards, admin cards, dropdown menus.
   static List<BoxShadow> get e1 => [
         BoxShadow(
-          color: _shadowTint.withOpacity(0.06),
+          color: _shadowTint.withValues(alpha: 0.06),
           offset: const Offset(0, 1),
           blurRadius: 2,
         ),
         BoxShadow(
-          color: _shadowTint.withOpacity(0.04),
+          color: _shadowTint.withValues(alpha: 0.04),
           offset: const Offset(0, 2),
           blurRadius: 8,
         ),
@@ -28,12 +28,12 @@ class AtlasElevation {
   /// Overlay — modal, dialog, toast. At most one active per screen.
   static List<BoxShadow> get e2 => [
         BoxShadow(
-          color: _shadowTint.withOpacity(0.08),
+          color: _shadowTint.withValues(alpha: 0.08),
           offset: const Offset(0, 4),
           blurRadius: 12,
         ),
         BoxShadow(
-          color: _shadowTint.withOpacity(0.06),
+          color: _shadowTint.withValues(alpha: 0.06),
           offset: const Offset(0, 12),
           blurRadius: 32,
         ),

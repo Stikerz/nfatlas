@@ -58,7 +58,7 @@ class AtlasBanner extends StatelessWidget {
       label: _isAlert ? 'alert' : 'status',
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: _accent.withOpacity(0.12),
+          color: _accent.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(AtlasRadius.medium),
           border: Border(left: BorderSide(color: _accent, width: 4)),
         ),

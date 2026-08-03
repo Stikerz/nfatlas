@@ -379,7 +379,7 @@ class _VerifiedChip extends StatelessWidget {
         vertical: AtlasSpace.s100,
       ),
       decoration: BoxDecoration(
-        color: AtlasColors.stateSuccess.withOpacity(0.12),
+        color: AtlasColors.stateSuccess.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(AtlasRadius.small),
       ),
       child: Row(
@@ -464,7 +464,7 @@ InputDecoration _atlasDecoration({
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: radius,
-      borderSide: BorderSide(color: AtlasColors.focusRing, width: 2),
+      borderSide: const BorderSide(color: AtlasColors.focusRing, width: 2),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: radius,
@@ -472,7 +472,7 @@ InputDecoration _atlasDecoration({
     ),
     disabledBorder: OutlineInputBorder(
       borderRadius: radius,
-      borderSide: BorderSide(color: AtlasColors.dividerHairline),
+      borderSide: const BorderSide(color: AtlasColors.dividerHairline),
     ),
   );
 }

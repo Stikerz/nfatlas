@@ -60,7 +60,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: AtlasColors.textPrimary),
+        leading: const BackButton(color: AtlasColors.textPrimary),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

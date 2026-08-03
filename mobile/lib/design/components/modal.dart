@@ -37,7 +37,7 @@ Future<T?> showAtlasModal<T>({
   return showDialog<T>(
     context: context,
     barrierDismissible: dismissOnBackdrop,
-    barrierColor: AtlasColors.surfaceInverted.withOpacity(0.60),
+    barrierColor: AtlasColors.surfaceInverted.withValues(alpha: 0.60),
     builder: (_) => _AtlasModal(
       headline: headline,
       body: body,

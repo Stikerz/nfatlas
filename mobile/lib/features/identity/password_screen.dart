@@ -44,7 +44,7 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: BackButton(color: AtlasColors.textPrimary),
+        leading: const BackButton(color: AtlasColors.textPrimary),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -77,8 +77,11 @@ class _PasswordScreenState extends ConsumerState<PasswordScreen> {
               const SizedBox(height: AtlasSpace.s400),
               _rule(_rule10Chars, '10 characters or more'),
               _rule(_ruleMix, 'Mix of letters and numbers'),
-              _rule(true, 'Not one you use for banking',
-                  advisoryOnly: true),
+              _rule(
+                true,
+                'Not one you use for banking',
+                advisoryOnly: true,
+              ),
               const SizedBox(height: AtlasSpace.s800),
               AtlasButton(
                 label: state.busy ? 'Creating account…' : 'Create account',

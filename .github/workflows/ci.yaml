@@ -94,11 +94,11 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      # --no-fatal-infos: info-severity lints (withOpacity deprecations,
-      # prefer_const_constructors, require_trailing_commas) are style
-      # nits, not correctness bugs — they don't gate the build. Errors
-      # and warnings still fail. Cleanup pass is tracked separately.
-      - run: flutter analyze --no-fatal-infos
+      # W7 Day 5 follow-up: all 30 info-level lints resolved. Info-
+      # severity findings now gate the build — accidental drift on
+      # withOpacity / prefer_const / trailing commas becomes visible
+      # immediately instead of accumulating.
+      - run: flutter analyze
 
   module-boundaries:
     # Enforces two invariants per week-3-build-plan §4.4 + ADR-005:
