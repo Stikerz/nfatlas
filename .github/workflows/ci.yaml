@@ -99,6 +99,10 @@ jobs:
       # withOpacity / prefer_const / trailing commas becomes visible
       # immediately instead of accumulating.
       - run: flutter analyze
+      # Widget-test suite (identity controller validators + toast +
+      # winner-claim intersection + password rules). Runs headless on
+      # the host Dart VM — no emulator required.
+      - run: flutter test
 
   module-boundaries:
     # Enforces two invariants per week-3-build-plan §4.4 + ADR-005:
