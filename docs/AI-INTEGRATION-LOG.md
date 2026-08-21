@@ -44,7 +44,7 @@ Framing calls elicited by BMad's asking discipline; the answer came from the fou
 
 Each surfaces in the relevant module docstring + at least one runbook or ADR amendment. All are targeted at V1 hardening.
 
-- **`server_seed` stored as plaintext hex** in `draws.server_seed_encrypted`. TODO(week-6+) — encrypt at rest per ADR-006 §Stage 1.
+- ~~**`server_seed` stored as plaintext hex** in `draws.server_seed_encrypted`. TODO(week-6+) — encrypt at rest per ADR-006 §Stage 1.~~ **Closed W8 Day 1 (2026-08-24)** — Fernet encryption via `atlas.draw.crypto`, keyed from `ATLAS_SERVER_SEED_KEY`. Migration 0010 re-encrypted the seeded demo row.
 - **Paystack stub mode** (`ATLAS_PAYSTACK_STUB_MODE=true`) default in V0.5. Production must be `false` (config validator enforces).
 - **Direct-call reveal notifications** via mailhog with try/except. V1 replaces with the outbox pattern per ADR-002.
 - **BLS drand signature verification** deferred. `drand_signature` persisted for later replay-verify per week-6-build-plan §6 risk 3.

@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log import writer as audit
+from atlas.draw import crypto as seed_crypto
 from atlas.draw import reveal as reveal_algo
 from atlas.draw import state_machine
 from atlas.draw.entropy.protocol import EntropyProvider
@@ -79,9 +80,9 @@ async def create_draw(
     for the earlier states). The commitment is published in the same
     breath via the `draw.committed` audit event.
 
-    V0.5 shortcut: server_seed stored plaintext hex per week-5-build-
-    plan §0 ask 5. TODO(v1): encrypt at rest via the platform secret
-    manager before serving live users.
+    W8 (ADR-006 §Stage 1): server_seed is encrypted at rest via Fernet
+    keyed from ATLAS_SERVER_SEED_KEY. Decryption happens only during
+    reveal (`reveal_draw`) and public proof (`routes.get_proof`).
     """
     draw_id = uuid.uuid4()
     server_seed = secrets.token_bytes(32)
@@ -97,7 +98,7 @@ async def create_draw(
         draw_time=draw_time,
         state=state_machine.DrawState.SALES_OPEN.value,
         commitment=commitment,
-        server_seed_encrypted=server_seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(server_seed),
     )
     session.add(draw)
     await session.flush()
@@ -248,7 +249,7 @@ async def reveal_draw(
     provider = entropy_provider or default_provider()
     entropy_inputs = await provider.fetch(draw.close_time)
 
-    server_seed_bytes = bytes.fromhex(draw.server_seed_encrypted)
+    server_seed_bytes = seed_crypto.decrypt_server_seed(draw.server_seed_encrypted)
 
     winner_ticket_ids = reveal_algo.select_winners(
         server_seed=server_seed_bytes,
@@ -310,7 +311,7 @@ async def reveal_draw(
         payload={
             "draw_id": str(draw_id),
             "commitment": draw.commitment,
-            "server_seed": draw.server_seed_encrypted,
+            "server_seed": server_seed_bytes.hex(),
             "tickets_hash": draw.tickets_hash,
             "ticket_count": len(ticket_ids),
             "reserves": reserves,

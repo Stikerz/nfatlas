@@ -11,11 +11,22 @@ so no async fixture scoping games. Each test gets its own engine + session
 
 from __future__ import annotations
 
+import os
 import subprocess
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-import pytest
+# Test-only default Fernet key so tests don't need to plumb ATLAS_SERVER_SEED_KEY
+# through every shell invocation. Production/staging validate presence in
+# atlas.config; dev provides it via .env. Set here before any code path
+# invokes get_settings() (which is lru_cache'd on first call).
+os.environ.setdefault(
+    "ATLAS_SERVER_SEED_KEY",
+    # Deterministic 44-char Fernet key — url-safe base64 of 32 bytes.
+    "eXItYXRsYXMtdGVzdC1zZWVkLWtleS0zMi1ieXRlcy4=",
+)
+
+import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (

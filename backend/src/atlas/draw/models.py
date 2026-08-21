@@ -1,13 +1,10 @@
 """Draw ORM models (ADR-006 §Protocol stages).
 
-V0.5 uses this row as a read-only reference for tickets. Week 6 adds
-the state-transition helpers (`commit`, `close`, `reveal`) and the
-`server_seed_encrypted` decryption path. Until then:
-
-  state    is fixed at 'sales_open' for the seeded demo draw.
-  commitment  is populated by the seed script (SHA-256(seed || draw_id)).
-  server_seed_encrypted  is a plaintext base64 seed for V0.5 (see
-    week-5-build-plan §0 ask 5 — encrypted-at-rest lands Week 6).
+State transitions and reveal are implemented in `atlas.draw.service`.
+W8: `server_seed_encrypted` holds a Fernet token per ADR-006 §Stage 1
+(key from ATLAS_SERVER_SEED_KEY via `atlas.draw.crypto`). Callers MUST
+route reads through `crypto.decrypt_server_seed` — the column value is
+opaque to every other module.
 """
 
 from __future__ import annotations

@@ -14,6 +14,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log.models import AuditLog
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity.models import User
 from atlas.skill import service as skill_service
@@ -39,7 +40,7 @@ async def _make_user(session: AsyncSession) -> uuid.UUID:
 async def _make_draw(session: AsyncSession, *, state: str = "sales_open") -> Draw:
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"test-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"test-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="test prize",
@@ -49,7 +50,7 @@ async def _make_draw(session: AsyncSession, *, state: str = "sales_open") -> Dra
         draw_time=now + timedelta(days=1, hours=1),
         state=state,
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     await session.flush()

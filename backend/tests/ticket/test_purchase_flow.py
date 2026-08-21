@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log.models import AuditLog
 from atlas.config import get_settings
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender
 from atlas.payment.providers import paystack_fixtures
@@ -55,7 +56,7 @@ def _sign(body: bytes) -> str:
 async def _seed_draw(session: AsyncSession, *, ticket_price: int = 500_00) -> Draw:
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"test-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"test-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="test prize",
@@ -65,7 +66,7 @@ async def _seed_draw(session: AsyncSession, *, ticket_price: int = 500_00) -> Dr
         draw_time=now + timedelta(days=1, hours=1),
         state="sales_open",
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     q = SkillQuestion(prompt="Q1")

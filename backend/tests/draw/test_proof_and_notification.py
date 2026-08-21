@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.audit_log.models import AuditLog
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender
 from atlas.identity.models import User
@@ -64,7 +65,7 @@ def _stub_notification_sender(
 async def _seed_draw(session: AsyncSession, *, state: str = "sales_open") -> Draw:
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"proof-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"proof-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="test prize for the proof",
@@ -74,7 +75,7 @@ async def _seed_draw(session: AsyncSession, *, state: str = "sales_open") -> Dra
         draw_time=now + timedelta(hours=2),
         state=state,
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     q = SkillQuestion(prompt="Q")
@@ -239,9 +240,14 @@ class TestProofPostReveal:
         assert response.status_code == 200
         body = response.json()
 
-        # Post-reveal fields populated.
+        # Post-reveal fields populated. `server_seed` in the proof is
+        # the decrypted seed as hex (public reveal per ADR-006 §Stage 3),
+        # not the encrypted-at-rest DB value (W8, ADR-006 §Stage 1).
         assert body["state"] == "revealed"
-        assert body["server_seed"] == draw.server_seed_encrypted
+        assert body["server_seed"] == seed_crypto.decrypt_server_seed(
+            draw.server_seed_encrypted
+        ).hex()
+        assert len(body["server_seed"]) == 64
         assert len(body["tickets_hash"]) == 64
         assert body["ticket_count"] == 6
         assert set(body["ordered_ticket_ids"]) == {str(t) for t in ticket_ids}

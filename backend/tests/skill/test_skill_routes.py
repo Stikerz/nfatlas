@@ -11,6 +11,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender
 from atlas.skill.models import (
@@ -35,7 +36,7 @@ async def _seed_draw_and_pool(
 ) -> Draw:
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"test-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"test-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="test prize",
@@ -45,7 +46,7 @@ async def _seed_draw_and_pool(
         draw_time=now + timedelta(days=1, hours=1),
         state="sales_open",
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     for i in range(size):

@@ -85,6 +85,17 @@ class Settings(BaseSettings):
     # verify. Optional today (V0.5 trusts drand's HTTPS endpoint).
     drand_group_public_key: str | None = None
 
+    # --- Server-seed encryption at rest (Week 8, ADR-006 §Stage 1) --------
+    # Fernet key: 32 url-safe base64 bytes (44-char string).
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Rotation: annual + on-incident per ADR-006 §Trade-offs. Multi-key
+    # rotation (with a `key_version` column) is a W9+ story.
+    server_seed_key: SecretStr = Field(
+        description="Fernet key for encrypting draws.server_seed_encrypted at rest.",
+        min_length=44,
+        max_length=44,
+    )
+
     # --- Demo mode (Week 7) -----------------------------------------------
     # Founder decision 2026-07-29 §0.3: when true, seed_v0_5.py compresses
     # the seeded draw's close/draw times to now+10min / now+11min so the

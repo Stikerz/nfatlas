@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.db import get_session
+from atlas.draw import crypto as seed_crypto
 from atlas.draw import reveal as reveal_algo
 from atlas.draw import service as draw_service
 from atlas.draw.models import Draw
@@ -284,7 +285,7 @@ async def get_proof(
         close_time=row.close_time,
         draw_time=row.draw_time,
         revealed_at=row.revealed_at,
-        server_seed=row.server_seed_encrypted,
+        server_seed=seed_crypto.decrypt_server_seed(row.server_seed_encrypted).hex(),
         tickets_hash=row.tickets_hash,
         ticket_count=len(ticket_ids),
         ordered_ticket_ids=ticket_ids,

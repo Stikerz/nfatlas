@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.audit_log.models import AuditLog
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw, DrawWinner
 from atlas.identity import mailhog_sender
 from atlas.identity.models import User
@@ -46,7 +47,7 @@ def _stub_notification(monkeypatch: pytest.MonkeyPatch) -> None:
 async def _seed_draw(session: AsyncSession) -> Draw:
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"claim-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"claim-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="test prize",
@@ -56,7 +57,7 @@ async def _seed_draw(session: AsyncSession) -> Draw:
         draw_time=now + timedelta(hours=2),
         state="sales_open",
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     q = SkillQuestion(prompt="Q")

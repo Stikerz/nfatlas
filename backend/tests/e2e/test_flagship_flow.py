@@ -38,6 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from atlas.admin import service as admin_service
 from atlas.audit_log.models import AuditLog
 from atlas.config import get_settings
+from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender
 from atlas.payment.providers import paystack_fixtures
@@ -71,7 +72,7 @@ async def _seed_draw_and_pool(session: AsyncSession) -> Draw:
     don't rely on the shipped seed script here."""
     now = datetime.now(UTC)
     draw_id = uuid.uuid4()
-    seed = b"e2e-seed-" + draw_id.bytes
+    seed = hashlib.sha256(b"e2e-seed-" + draw_id.bytes).digest()
     draw = Draw(
         id=draw_id,
         prize_copy="Win ₦2M cash or a Lagos apartment.",
@@ -81,7 +82,7 @@ async def _seed_draw_and_pool(session: AsyncSession) -> Draw:
         draw_time=now + timedelta(days=3, hours=1),
         state="sales_open",
         commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
-        server_seed_encrypted=seed.hex(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
     # Three questions gives the rotation somewhere to pick from.

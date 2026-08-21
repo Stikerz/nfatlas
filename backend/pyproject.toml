@@ -25,6 +25,7 @@ dependencies = [
     "pyjwt>=2.9",
     "aiosmtplib>=3.0",
     "httpx>=0.28",
+    "cryptography>=44",
 ]
 
 [project.optional-dependencies]

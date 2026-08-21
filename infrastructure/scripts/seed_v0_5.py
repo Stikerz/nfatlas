@@ -5,8 +5,7 @@ Populated per week-5-build-plan §Day 1. Creates:
     active draw at a time). Prize copy, close_time = now+3d, draw_time
     = now+3d+1h, ticket_price = ₦500.
   - Server seed + commitment per ADR-006 §Protocol stage 1.
-    TODO(week-6): encrypt server_seed at rest. V0.5 stores plaintext
-    per week-5-build-plan §0 ask 5.
+    W8: seed encrypted at rest via Fernet keyed from ATLAS_SERVER_SEED_KEY.
   - A pool of 10 skill questions with 3 or 4 options each.
 
 Usage (from repo root, backend env loaded):
@@ -43,6 +42,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert  # noqa: E402
 
 from atlas.config import get_settings  # noqa: E402
 from atlas.db import get_sessionmaker  # noqa: E402
+from atlas.draw import crypto as seed_crypto  # noqa: E402
 from atlas.draw.models import Draw  # noqa: E402
 from atlas.skill.models import SkillQuestion, SkillQuestionOption  # noqa: E402
 
@@ -126,8 +126,7 @@ async def _seed_draw(session) -> Draw:
 
     # Deterministic server_seed per DEMO_DRAW_ID so the commitment stays
     # stable across re-seeds (a real reveal would rotate this per draw).
-    # Real reveals happen Week 6 — for V0.5 the seed is a placeholder.
-    # TODO(week-6): generate `secrets.token_bytes(32)` + encrypt-at-rest.
+    # Stored Fernet-encrypted per ADR-006 §Stage 1 (W8).
     server_seed = hashlib.sha256(b"atlas-v0.5-demo-seed:" + DEMO_DRAW_ID.bytes).digest()
     commitment = _commitment(server_seed, DEMO_DRAW_ID)
 
@@ -140,8 +139,7 @@ async def _seed_draw(session) -> Draw:
         "draw_time": draw_time,
         "state": "sales_open",
         "commitment": commitment,
-        # TODO(week-6): encrypt with the platform secret manager.
-        "server_seed_encrypted": server_seed.hex(),
+        "server_seed_encrypted": seed_crypto.encrypt_server_seed(server_seed),
     }
     stmt = (
         pg_insert(Draw)
