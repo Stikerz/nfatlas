@@ -16,7 +16,6 @@ next state string or an IllegalTransitionError.
 from __future__ import annotations
 
 import hashlib
-import logging
 import secrets
 import uuid
 from datetime import UTC, datetime
@@ -32,10 +31,9 @@ from atlas.draw import state_machine
 from atlas.draw.entropy.protocol import EntropyProvider
 from atlas.draw.entropy.provider import default_provider
 from atlas.draw.models import Draw, DrawWinner
-from atlas.notification.winner import notify_winner
+from atlas.events import WINNER_SELECTED_V1
+from atlas.outbox import writer as outbox
 from atlas.ticket.models import Ticket
-
-logger = logging.getLogger("atlas.draw.service")
 
 
 class DrawNotFoundError(LookupError):
@@ -339,28 +337,27 @@ async def reveal_draw(
             },
         )
 
-    # Notification — V0.5 shortcut per §0 ask 5. Try/except each call so
-    # a mailhog outage does NOT abort a reveal. The
-    # notification.winner_selected audit event fires INSIDE notify_winner
-    # before the delivery attempt, so the trail records "we tried" even
-    # if SMTP is down.
+    # Notification — W8 Day 3: emit one outbox row per winner in the
+    # same transaction as the winner INSERTs (ADR-002 §Idempotency).
+    # The worker picks up + dispatches to atlas.notification.winner.
+    # deliver_from_payload; mailhog outages retry with backoff and
+    # never block reveal.
     for row in winner_rows:
-        try:
-            await notify_winner(
-                session,
-                user_id=row.user_id,
-                draw_id=draw_id,
-                position=row.position,
-                is_primary=row.is_primary,
-                prize_copy=draw.prize_copy,
-            )
-        except Exception:
-            logger.exception(
-                "winner notification failed (draw=%s user=%s position=%s)",
-                draw_id,
-                row.user_id,
-                row.position,
-            )
+        await outbox.emit(
+            session,
+            event_name=WINNER_SELECTED_V1,
+            aggregate_type="draw_winner",
+            aggregate_id=str(row.id),
+            payload={
+                "draw_id": str(draw_id),
+                "winner_id": str(row.id),
+                "ticket_id": str(row.ticket_id),
+                "user_id": str(row.user_id),
+                "position": row.position,
+                "is_primary": row.is_primary,
+                "prize_copy": draw.prize_copy,
+            },
+        )
 
     return draw
 

@@ -1,12 +1,12 @@
-"""Notification module (Week 6 skeleton).
+"""Notification module (W8 Day 3).
 
-V0.5: winner notification via mailhog. `notify_winner` is called from
-`atlas.draw.service.reveal_draw` wrapped in try/except so SMTP
-failures never abort the reveal transaction (week-6-build-plan §0 ask
-5). Emits `notification.winner_selected` audit event either way — the
-event fires even if the email delivery didn't so the audit trail
-records "we tried".
+W8 replaced the direct-call `notify_winner` from reveal_draw with an
+outbox producer (`atlas.draw.service.reveal_draw` → `atlas.outbox.
+writer.emit(WINNER_SELECTED_V1, ...)`). The consumer is
+`atlas.notification.winner.deliver_from_payload`, registered in
+`atlas.outbox.dispatcher.HANDLERS`. Delivery is worker-driven with
+at-least-once semantics per ADR-002.
 
-V1 replaces this module with a real outbox + WhatsApp adapter per
-ADR-002.
+Mailhog remains the V0.5 delivery target; the WhatsApp / real-SMS
+producers are V1 additions on top of the same outbox contract.
 """

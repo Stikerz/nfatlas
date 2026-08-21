@@ -28,6 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.config import get_settings
+from atlas.outbox import worker as outbox_worker
 from atlas.identity import mailhog_sender
 from atlas.payment.providers import paystack_fixtures
 from atlas.skill.models import (
@@ -264,5 +265,8 @@ async def test_draw_lifecycle_end_to_end(
     )
     assert api_primary["ticket_id"] in result.stdout
 
-    # ── Winner notifications fired ──────────────────────────────────────
+    # ── Winner notifications fired via outbox worker (W8 Day 3) ────────
+    # Reveal enqueued 6 WINNER_SELECTED_V1 rows; the worker dispatches
+    # them to the stubbed mailhog.
+    await outbox_worker.run_once(db_session, batch_size=100, max_attempts=10)
     assert len(_stub_notification) == 6

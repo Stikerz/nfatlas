@@ -20,8 +20,11 @@ from atlas.admin import service as admin_service
 from atlas.audit_log.models import AuditLog
 from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
+from atlas.events import WINNER_SELECTED_V1
 from atlas.identity import mailhog_sender
 from atlas.identity.models import User
+from atlas.outbox import worker as outbox_worker
+from atlas.outbox.models import OutboxRow
 from atlas.skill.models import (
     SkillQuestion,
     SkillQuestionOption,
@@ -404,7 +407,9 @@ class TestVerifierCLI:
 
 
 class TestWinnerNotification:
-    async def test_reveal_emits_notification_audit_and_sends_email(
+    """W8 Day 3: reveal enqueues outbox rows; delivery is worker-driven."""
+
+    async def test_reveal_enqueues_outbox_rows_then_worker_delivers(
         self,
         client: AsyncClient,
         db_session: AsyncSession,
@@ -418,16 +423,26 @@ class TestWinnerNotification:
         )
         await _close_and_reveal(client, draw.id, admin_token)
 
-        # 6 notifications sent (primary + 5 reserves).
-        assert len(_stub_notification_sender) == 6
-        primary = _stub_notification_sender[0]
-        assert primary["subject"] == "You won a draw"
-        assert "primary" in primary["body"]
-        reserve = _stub_notification_sender[1]
-        assert reserve["subject"] == "You're a reserve winner"
-        assert "reserve" in reserve["body"]
+        # Post-reveal: 6 outbox rows queued, no delivery + no audit yet.
+        queued = (
+            await db_session.execute(
+                select(func.count()).select_from(OutboxRow).where(
+                    OutboxRow.event_name == WINNER_SELECTED_V1
+                )
+            )
+        ).scalar_one()
+        assert queued == 6
+        assert _stub_notification_sender == []
 
-        # Audit events (one per winner).
+        # Worker dispatches — 6 emails + 6 audit events + all rows processed.
+        processed = await outbox_worker.run_once(
+            db_session, batch_size=100, max_attempts=10
+        )
+        assert processed == 6
+        assert len(_stub_notification_sender) == 6
+        subjects = {c["subject"] for c in _stub_notification_sender}
+        assert subjects == {"You won a draw", "You're a reserve winner"}
+
         notif_count = (
             await db_session.execute(
                 select(func.count()).select_from(AuditLog).where(
@@ -436,6 +451,15 @@ class TestWinnerNotification:
             )
         ).scalar_one()
         assert notif_count == 6
+
+        unprocessed = (
+            await db_session.execute(
+                select(func.count()).select_from(OutboxRow).where(
+                    OutboxRow.processed_at.is_(None)
+                )
+            )
+        ).scalar_one()
+        assert unprocessed == 0
 
     async def test_smtp_failure_does_not_abort_reveal(
         self,
@@ -456,12 +480,26 @@ class TestWinnerNotification:
         )
         await _close_and_reveal(client, draw.id, admin_token)
 
-        # Reveal still succeeded: winner rows present, state=revealed.
+        # Reveal still succeeded — outbox decouples delivery from reveal.
         await db_session.refresh(draw)
         assert draw.state == "revealed"
 
-        # Audit event STILL fires for each winner (audit-log-before-
-        # delivery discipline in notify_winner).
+        # 6 outbox rows queued.
+        queued = (
+            await db_session.execute(
+                select(func.count()).select_from(OutboxRow).where(
+                    OutboxRow.event_name == WINNER_SELECTED_V1
+                )
+            )
+        ).scalar_one()
+        assert queued == 6
+
+        # Worker attempts delivery, SMTP raises, retries scheduled.
+        # Audit event STILL fires (audit-before-delivery discipline in
+        # deliver_from_payload).
+        await outbox_worker.run_once(
+            db_session, batch_size=100, max_attempts=10
+        )
         notif_count = (
             await db_session.execute(
                 select(func.count()).select_from(AuditLog).where(
@@ -470,3 +508,13 @@ class TestWinnerNotification:
             )
         ).scalar_one()
         assert notif_count == 6
+
+        # All 6 rows retried (attempts=1, still unprocessed).
+        still_unprocessed = (
+            await db_session.execute(
+                select(OutboxRow).where(OutboxRow.processed_at.is_(None))
+            )
+        ).scalars().all()
+        assert len(still_unprocessed) == 6
+        assert all(r.attempts == 1 for r in still_unprocessed)
+        assert all("mailhog is down" in (r.last_error or "") for r in still_unprocessed)

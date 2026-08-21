@@ -96,6 +96,11 @@ class Settings(BaseSettings):
         max_length=44,
     )
 
+    # --- Outbox worker (Week 8 Day 2-3, ADR-002 §Processing model) --------
+    outbox_poll_interval_seconds: float = 1.0
+    outbox_batch_size: int = 100
+    outbox_max_attempts: int = 10
+
     # --- Demo mode (Week 7) -----------------------------------------------
     # Founder decision 2026-07-29 §0.3: when true, seed_v0_5.py compresses
     # the seeded draw's close/draw times to now+10min / now+11min so the
