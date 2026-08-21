@@ -45,6 +45,8 @@ _TRUNCATE_TABLES = (
     "idempotency_records",
     "ledger_entries",
     "payment_intents",
+    "outbox",
+    "outbox_dead_letter",
     "draw_winners",
     "free_entry_slips",
     "tickets",
