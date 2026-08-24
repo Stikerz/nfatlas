@@ -115,6 +115,31 @@ register_consumer() {
 # Answer the skill question correctly for the current CONSUMER_TOKEN,
 # purchase a ticket, feed a signed webhook. May be called multiple
 # times per draw to build the pool.
+# Correct answer for each question seeded by seed_v0_5.py, keyed on a
+# distinctive substring of the prompt.
+#
+# This was a flat "first option whose text is in this list" match, which
+# answered "What is the square root of 81?" with 7 — the continents
+# answer, which sorts earlier in display_order and is also in the list.
+# Questions rotate per (user, draw, minute bucket), so across six
+# consumers the script failed 1 - 0.9^6 = ~47% of runs on
+# entitlement_not_correct. Keying on the prompt removes the collision.
+correct_answer_for() {
+  case "$1" in
+    *'capital of Nigeria'*)                     printf 'Abuja' ;;
+    *'top stripe of the Nigerian flag'*)        printf 'Green' ;;
+    *'minutes are there in an hour'*)           printf '60' ;;
+    *'12 multiplied by 12'*)                    printf '144' ;;
+    *'Red Planet'*)                             printf 'Mars' ;;
+    *'Water freezes'*)                          printf '0' ;;
+    *'continents are there'*)                   printf '7' ;;
+    *'most native speakers'*)                   printf 'Mandarin Chinese' ;;
+    *'currency is used in the United Kingdom'*) printf 'Pound Sterling' ;;
+    *'square root of 81'*)                      printf '9' ;;
+    *) return 1 ;;
+  esac
+}
+
 buy_ticket_for_current_consumer() {
   local draw_id="$1"
   local question_json
@@ -122,10 +147,13 @@ buy_ticket_for_current_consumer() {
     -H "Authorization: Bearer $CONSUMER_TOKEN")
   local attempt_id
   attempt_id=$(echo "$question_json" | jq -r '.attempt_id')
-  local correct_id
-  # Every seeded question has "correct" (or a known-correct choice) — pick it.
-  correct_id=$(echo "$question_json" | jq -r '.options[] | select(.text=="Abuja" or .text=="Green" or .text=="60" or .text=="144" or .text=="Mars" or .text=="0" or .text=="7" or .text=="Mandarin Chinese" or .text=="Pound Sterling" or .text=="9") | .id' | head -1)
-  [ -n "$correct_id" ] || fail "no known-correct option in question: $question_json"
+  local prompt answer correct_id
+  prompt=$(echo "$question_json" | jq -r '.prompt')
+  answer=$(correct_answer_for "$prompt") \
+    || fail "no known answer for seeded question: $prompt"
+  correct_id=$(echo "$question_json" \
+    | jq -r --arg a "$answer" '.options[] | select(.text==$a) | .id' | head -1)
+  [ -n "$correct_id" ] || fail "answer '$answer' not among options for: $prompt"
   curl -sS -X POST "$API/api/v1/skill-questions/attempts/$attempt_id/answer" \
     -H 'Content-Type: application/json' \
     -H "Authorization: Bearer $CONSUMER_TOKEN" \
