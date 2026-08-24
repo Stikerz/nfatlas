@@ -57,11 +57,36 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "_bmad-output" / "demo"
 OUTPUT_NAME = "atlas-hero-flow.webm"
 
-# Six known-correct skill-question answers (mirrors demo_rehearsal.sh:127).
-CORRECT_OPTION_TEXTS = {
-    "Abuja", "Green", "60", "144", "Mars", "0",
-    "7", "Mandarin Chinese", "Pound Sterling", "9",
-}
+# Correct answer for each question seeded by seed_v0_5.py, keyed on a
+# distinctive substring of the prompt (mirrors correct_answer_for() in
+# demo_rehearsal.sh).
+#
+# This was a flat set matched against option text, taking the first hit.
+# That answered "What is the square root of 81?" with 7 — the continents
+# answer, which sorts earlier in display_order and is also in the set.
+# Questions rotate per (user, draw, minute bucket), so across six
+# consumers it failed 1 - 0.9^6 = ~47% of runs on entitlement_not_correct.
+# Keying on the prompt removes the collision.
+ANSWER_BY_PROMPT_FRAGMENT: tuple[tuple[str, str], ...] = (
+    ("capital of Nigeria", "Abuja"),
+    ("top stripe of the Nigerian flag", "Green"),
+    ("minutes are there in an hour", "60"),
+    ("12 multiplied by 12", "144"),
+    ("Red Planet", "Mars"),
+    ("Water freezes", "0"),
+    ("continents are there", "7"),
+    ("most native speakers", "Mandarin Chinese"),
+    ("currency is used in the United Kingdom", "Pound Sterling"),
+    ("square root of 81", "9"),
+)
+
+
+def correct_answer_for(prompt: str) -> str:
+    """Return the correct option text for a seeded skill question."""
+    for fragment, answer in ANSWER_BY_PROMPT_FRAGMENT:
+        if fragment in prompt:
+            return answer
+    raise RuntimeError(f"no known answer for seeded question: {prompt!r}")
 
 # 1 primary + 5 reserves = 6 tickets in the pool.
 POOL_SIZE = 6
@@ -193,16 +218,15 @@ async def _buy_ticket(
     q.raise_for_status()
     qbody = q.json()
     attempt_id = qbody["attempt_id"]
+    answer = correct_answer_for(qbody["prompt"])
     correct_id = next(
-        (
-            o["id"]
-            for o in qbody["options"]
-            if o["text"] in CORRECT_OPTION_TEXTS
-        ),
+        (o["id"] for o in qbody["options"] if o["text"] == answer),
         None,
     )
     if not correct_id:
-        raise RuntimeError(f"no known-correct option: {qbody}")
+        raise RuntimeError(
+            f"answer {answer!r} not among options for {qbody['prompt']!r}"
+        )
 
     await client.post(
         f"/api/v1/skill-questions/attempts/{attempt_id}/answer",
@@ -279,13 +303,21 @@ async def record_visible_surfaces(cfg: Config, draw_id: str) -> Path:
             viewport={"width": 1440, "height": 900},
             record_video_dir=str(OUTPUT_DIR),
             record_video_size={"width": 1440, "height": 900},
+            # CopyCommand.tsx swallows a clipboard rejection in a catch and
+            # leaves the button reading "Copy". Without this grant the
+            # copy-verify beat — the one this script deliberately pauses on
+            # — never renders, and the failure is silent.
+            permissions=["clipboard-read", "clipboard-write"],
         )
         page = await context.new_page()
 
         # 1. Admin login
         await page.goto(f"{cfg.admin_base}/login")
-        await page.get_by_label("Email").fill(cfg.admin_email)
-        await page.get_by_label("Password").fill(cfg.admin_password)
+        # Role+name, not get_by_label: the password field ships with a
+        # "Show password" toggle whose aria-label also contains "Password",
+        # so get_by_label matches two elements and trips strict mode.
+        await page.get_by_role("textbox", name="Email").fill(cfg.admin_email)
+        await page.get_by_role("textbox", name="Password").fill(cfg.admin_password)
         await page.get_by_role("button", name="Sign in").click()
         await page.wait_for_url(f"{cfg.admin_base}/admin", timeout=15_000)
 
@@ -323,7 +355,9 @@ async def record_visible_surfaces(cfg: Config, draw_id: str) -> Path:
         await copy_button.scroll_into_view_if_needed()
         await page.wait_for_timeout(1_000)
         await copy_button.click()
-        await page.wait_for_timeout(2_000)  # let "Copied" state read
+        # CopyCommand reverts to "Copy" after exactly 2000ms, so waiting
+        # 2000ms lands on the revert boundary. Hold short of it.
+        await page.wait_for_timeout(1_200)
 
         # 7. Close — flush the video file.
         video = page.video
