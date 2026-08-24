@@ -251,8 +251,12 @@ jobs:
           #   identity/otp_service.py        — HMAC pepper
           #   payment/providers/paystack.py  — outbound API auth + webhook HMAC
           #   skill/service.py               — HMAC pepper for question rotation
+          #   draw/crypto.py                 — server-seed Fernet key (ADR-006 §Stage 1)
+          #   outbox/worker.py               — database URL for the standalone
+          #                                    worker process, which builds its
+          #                                    own engine rather than using db.py
           matches=$(grep -rn 'get_secret_value' backend/src/atlas --include='*.py' \
-              | grep -vE '(db\.py|identity/session_service\.py|identity/otp_service\.py|payment/providers/paystack\.py|skill/service\.py):' \
+              | grep -vE '(db\.py|identity/session_service\.py|identity/otp_service\.py|payment/providers/paystack\.py|skill/service\.py|draw/crypto\.py|outbox/worker\.py):' \
               || true)
           if [ -n "$matches" ] ; then
             echo "$matches"
