@@ -45,6 +45,7 @@ __pycache__/
 .ruff_cache/
 venv/
 .venv/
+.venv-*/
 *.egg-info/
 
 # Coverage / test artefacts
