@@ -113,10 +113,10 @@ class TestNextQuestionRotation:
     async def test_different_minute_may_rotate(
         self, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Force two different bucket values and confirm rotation is
-        deterministic per (user, draw, bucket) — different buckets should
-        (with high probability across a pool of 5) produce different
-        questions. Using two hand-picked buckets keeps this a golden test."""
+        """Confirm rotation is deterministic per (user, draw, bucket) and
+        that it actually varies as the bucket advances. Sampled across a
+        spread of buckets rather than a hand-picked pair — see the comment
+        on `offsets` below for why the pair version was flaky."""
         user_id = await _make_user(db_session)
         draw = await _make_draw(db_session)
         await _seed_pool(db_session, size=5)
@@ -135,9 +135,6 @@ class TestNextQuestionRotation:
         b1 = skill_service._rotation_offset(
             user_id=user_id, draw_id=draw.id, bucket=100, pool_size=len(pool)
         )
-        b2 = skill_service._rotation_offset(
-            user_id=user_id, draw_id=draw.id, bucket=200, pool_size=len(pool)
-        )
         # Deterministic values → same call reproduces them.
         assert (
             skill_service._rotation_offset(
@@ -145,13 +142,19 @@ class TestNextQuestionRotation:
             )
             == b1
         )
-        # And with sensible bucket spread the offsets are distinct
-        # for at least one such pair; if the whole HMAC space collapses
-        # to a single slot for this user, the test surfaces it as a real
-        # signal rather than a flake.
-        assert b1 != b2 or b1 != skill_service._rotation_offset(
-            user_id=user_id, draw_id=draw.id, bucket=300, pool_size=len(pool)
-        )
+        # Rotation must actually move as the bucket advances. The previous
+        # form compared buckets 100/200 and fell back to 300, which on a
+        # 5-question pool collapses to one slot with probability
+        # (1/5) * (1/5) = 4% — a real ~4%-per-run flake, since user_id is a
+        # fresh UUID each run. Sampling a spread of buckets tests the same
+        # property with a (1/5)**19 false-failure rate.
+        offsets = {
+            skill_service._rotation_offset(
+                user_id=user_id, draw_id=draw.id, bucket=bucket, pool_size=len(pool)
+            )
+            for bucket in range(100, 2100, 100)
+        }
+        assert len(offsets) > 1, f"rotation collapsed to a single slot: {offsets}"
 
     async def test_different_users_may_get_different_questions(
         self, db_session: AsyncSession

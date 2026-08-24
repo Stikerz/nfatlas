@@ -28,8 +28,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.config import get_settings
-from atlas.outbox import worker as outbox_worker
 from atlas.identity import mailhog_sender
+from atlas.outbox import worker as outbox_worker
 from atlas.payment.providers import paystack_fixtures
 from atlas.skill.models import (
     SkillQuestion,

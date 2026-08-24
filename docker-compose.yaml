@@ -52,6 +52,10 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.backend
+      # Local stack runs the dev image so `make test|lint|typecheck` have
+      # pytest/ruff/mypy and the test suite available. Production builds
+      # target `runtime` explicitly.
+      target: dev
     container_name: atlas-backend
     environment:
       ATLAS_ENV: dev

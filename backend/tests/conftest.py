@@ -26,7 +26,7 @@ os.environ.setdefault(
     "eXItYXRsYXMtdGVzdC1zZWVkLWtleS0zMi1ieXRlcy4=",
 )
 
-import pytest  # noqa: E402
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
