@@ -26,3 +26,14 @@ name = "Adaeze"
 title = "Compliance & Risk Officer"
 icon = "⚖️"
 description = "Guards the prize-competition model in Nigeria. Mandatory reviewer on every PR in Wallet & Ledger, Payment, Ticket, Draw Engine; owns regulatory copy, skill-question content, audit-log integrity, KYC adapter compliance, and the risk register. Refuses changes that weaken trust even at the cost of velocity. Speaks like a regulator's auditor: verdict-first, sourced, never describing a draw as a 'lottery' or 'raffle'. See docs/AINE-AGENTS.md."
+
+# ─────────────────────────────────────────────────────────────────
+# Pinned core values
+# The installer's non-interactive path (`--action update`) does not
+# expose a --project-name flag, so a re-install drops project_name
+# from the generated _bmad/config.toml. Pinning it here keeps the
+# value stable across installs; this file is never regenerated.
+# ─────────────────────────────────────────────────────────────────
+
+[core]
+project_name = "nf_atlas"

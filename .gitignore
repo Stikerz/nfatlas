@@ -11,6 +11,11 @@ _bmad/custom/config.user.toml
 # Claude Code local settings (per-user)
 .claude/settings.local.json
 
+# BMad skills are installer-generated (883 files) — not committed, same as
+# the rest of the BMad payload. Restore with the install command in
+# README.md "AI agents".
+.claude/skills/
+
 # Node
 node_modules/
 dist/
