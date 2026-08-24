@@ -84,8 +84,14 @@ class TestJWT:
         token = session_service._encode_jwt(
             session_id=session_id, user_id=user_id, expires_at=expires_at
         )
-        # Flip a character in the signature (last segment).
+        # Flip the first character of the signature (last segment) to a
+        # character it is not already. Substituting a fixed 'X' was a no-op
+        # whenever the signature already began with 'X' — base64url has a
+        # 64-character alphabet, so that happened ~1.6% of runs, leaving the
+        # "tampered" token byte-identical to the valid one and the test
+        # failing with DID NOT RAISE.
         header, payload, signature = token.split(".")
-        tampered = f"{header}.{payload}.{'X' + signature[1:]}"
+        flipped = "Y" if signature[0] == "X" else "X"
+        tampered = f"{header}.{payload}.{flipped + signature[1:]}"
         with pytest.raises(pyjwt.InvalidTokenError):
             session_service.decode_jwt(tampered)

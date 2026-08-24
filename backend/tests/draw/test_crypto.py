@@ -27,7 +27,10 @@ class TestEncryptDecrypt:
     def test_tamper_is_rejected(self) -> None:
         seed = b"\x04" * 32
         token = crypto.encrypt_server_seed(seed)
-        tampered = token[:-4] + "AAAA"
+        # Same guard as the JWT signature test: a fixed suffix is a no-op
+        # when the token already ends with it. Only ~1 run in 64^4 here, but
+        # it is the identical failure mode, so don't leave it loaded.
+        tampered = token[:-4] + ("BBBB" if token.endswith("AAAA") else "AAAA")
         with pytest.raises(InvalidToken):
             crypto.decrypt_server_seed(tampered)
 
