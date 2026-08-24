@@ -1,5 +1,6 @@
 'use client';
 
+import type { Route } from 'next';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -102,7 +103,11 @@ export function AdminSidebar() {
               return (
                 <li key={`${group.label}-${item.label}`}>
                   {item.href ? (
-                    <Link href={item.href}>{inner}</Link>
+                    // `typedRoutes` cannot verify these statically: several
+                    // NAV_GROUPS targets (tickets, claims, users, compliance,
+                    // skill-questions, seed-tools) are planned surfaces with no
+                    // page.tsx yet, so they are not in the generated Route union.
+                    <Link href={item.href as Route}>{inner}</Link>
                   ) : (
                     <div className="cursor-default">{inner}</div>
                   )}

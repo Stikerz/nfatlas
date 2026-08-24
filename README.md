@@ -132,6 +132,30 @@ Atlas custom agents in [`_bmad/custom/config.toml`](_bmad/custom/config.toml):
 
 Invoke via BMad skills or adopt persona in-context per [`docs/AINE-AGENTS.md`](docs/AINE-AGENTS.md).
 
+### Install the skills (once per clone)
+
+`_bmad/` holds config only — the skill payload is installer-generated and
+gitignored. Restore it, pinned to the versions this repo expects:
+
+```bash
+npx bmad-method@6.9.0 install -y \
+  --modules bmm,tea --tools claude-code --action update \
+  --user-name "$USER" --communication-language English \
+  --document-output-language English \
+  --output-folder '{project-root}/_bmad-output' --pin tea=v1.19.0
+```
+
+Writes 56 skills to `.claude/skills/`; restart Claude Code afterwards so it
+picks them up. BMad's scripts shell out to `python3` and need >= 3.11 for
+`tomllib` — macOS system Python is 3.9, so put Homebrew's on PATH:
+`export PATH="$(brew --prefix python@3.13)/libexec/bin:$PATH"`.
+
+The installer has no `--project-name` flag, so a run drops `project_name`
+from the generated `_bmad/config.toml`; it is pinned in
+[`_bmad/custom/config.toml`](_bmad/custom/config.toml), which the installer
+never regenerates. Verify with
+`python3 _bmad/scripts/resolve_config.py --project-root .`.
+
 ---
 
 ## Legal model

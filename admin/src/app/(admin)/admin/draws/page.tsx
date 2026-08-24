@@ -64,9 +64,7 @@ export default async function AdminDrawsPage() {
         </h2>
         <p className="mt-200 text-[15px] text-text-secondary">
           Create + close + reveal draws. Public trust surface is{' '}
-          <Link href="/proof" className="underline">
-            /proof/[drawId]
-          </Link>
+          <code className="underline">/proof/[drawId]</code>
           .
         </p>
       </div>

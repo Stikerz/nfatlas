@@ -37,3 +37,32 @@ HEALTHCHECK --interval=10s --timeout=3s --start-period=15s --retries=3 \
     CMD python -c "import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/healthz', timeout=2); sys.exit(0)" || exit 1
 
 CMD ["uvicorn", "atlas.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ── Dev image ─────────────────────────────────────────────────────────────
+# Adds the [dev] extras (pytest, ruff, mypy) plus the test suite and the
+# pyproject.toml that carries their configuration. The local compose stack
+# targets this stage so `make test|lint|typecheck` work without a host
+# Python install — README prereqs list Python as "only if you skip Docker".
+FROM runtime AS dev
+
+USER root
+
+COPY pyproject.toml ./
+COPY --chown=atlas:atlas tests/ ./tests/
+# tests/draw + tests/e2e shell out to the standalone proof verifier.
+COPY --chown=atlas:atlas tools/ ./tools/
+
+RUN pip install --no-cache-dir ".[dev]"
+
+# ruff/mypy/pytest write their caches into the working directory, so it must
+# be writable by the unprivileged runtime user.
+RUN chown -R atlas:atlas /app
+
+USER atlas
+
+# ── Default stage ─────────────────────────────────────────────────────────
+# A build that omits --target resolves to the LAST stage. Alias it to the
+# slim runtime so an untargeted `docker build` can never ship pytest/ruff/
+# mypy into a production image. Production builds should still pass
+# --target runtime explicitly.
+FROM runtime AS production

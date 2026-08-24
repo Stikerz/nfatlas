@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-import { ADMIN_SESSION_COOKIE } from './src/lib/session';
+import { ADMIN_SESSION_COOKIE } from '@/lib/session';
 
 /**
  * Auth guard: any request under /admin without a session cookie is

@@ -6,7 +6,6 @@ build-backend = "hatchling.build"
 name = "atlas"
 version = "0.5.0"
 description = "Project Atlas backend — premium prize-competition platform (V0.5 investor demo)"
-readme = "../README.md"
 requires-python = ">=3.13"
 license = { text = "Proprietary" }
 authors = [{ name = "nf_atlas" }]
