@@ -69,3 +69,6 @@ Thumbs.db
 *.log
 logs/
 tmp/
+
+# pnpm content-addressable store (created by a local store-dir setting)
+admin/.pnpm-store/
