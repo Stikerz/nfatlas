@@ -136,25 +136,75 @@ Every event carries the hash of the one before it (ADR-005). Alter a historical 
 
 ## Mobile
 
-Flutter on an iOS simulator, built from the `ios/` scaffolding added in W8 —
-the platform directories had never existed, so the app could not be run at all
-before then.
+Every consumer screen, rendered from
+`mobile/test/design/screen_goldens_test.dart`. These are golden files, so a UI
+change shows up as an image diff in the pull request that caused it. Refresh
+them with:
 
-### Registration, on the iOS simulator
+```bash
+cd mobile && flutter test test/design/screen_goldens_test.dart --update-goldens
+```
 
-`mobile`
+They render real typography because the faces are bundled under
+`mobile/assets/google_fonts/` rather than fetched at runtime.
 
-Fraunces display type, the +234 prefix fixed rather than a country picker, date of birth gating at 18, and terms as an explicit checkbox.
+### Register
 
-![Registration, on the iOS simulator](screens/m01-register.png)
+The +234 prefix is fixed rather than a country picker, date of birth gates at 18, and terms are an explicit checkbox.
+
+![Register](../mobile/test/design/goldens/register.png)
 
 
-**Six further screens are built but not pictured:** `welcome`, `otp`, `password`,
-`home`, `skill_question` and `winner_claim`. All are covered by the passing widget
-tests. Capturing them needs either scripted taps on the simulator, which `simctl`
-cannot do, or golden files — and goldens fail because the app pulls Fraunces and
-Inter from Google Fonts at runtime, which the test VM cannot reach. Wiring up
-`integration_test` with bundled fonts is the fix if these need regular review.
+### One-time code
+
+Delivered to Mailhog in V0.5 rather than by SMS.
+
+![One-time code](../mobile/test/design/goldens/otp.png)
+
+
+### Set a password
+
+Two rules gate the button — ten characters and a letter/number mix. The third line is advisory and always passes.
+
+![Set a password](../mobile/test/design/goldens/password.png)
+
+
+### Welcome
+
+Auto-advances to Home after 800ms, which is why its golden is captured at 300ms.
+
+![Welcome](../mobile/test/design/goldens/welcome.png)
+
+
+### Home
+
+Wallet chip, the active draw, and the commitment shown to the consumer before the reveal — the same hash the public proof page publishes.
+
+![Home](../mobile/test/design/goldens/home.png)
+
+
+### Skill question
+
+Mandatory on every paid entry. This is the mechanism that makes Atlas a prize competition rather than a lottery.
+
+![Skill question](../mobile/test/design/goldens/skill-question.png)
+
+
+### Winner claim
+
+Post-reveal claim surface.
+
+![Winner claim](../mobile/test/design/goldens/winner-claim.png)
+
+
+### Running on an iOS simulator
+
+`simulator`
+
+The real app on a device, device chrome and all — proof it runs, not just that its widgets paint.
+
+![Running on an iOS simulator](screens/m01-register.png)
+
 
 ---
 

@@ -208,13 +208,41 @@ SECTIONS: list[dict] = [
 
 MOBILE_SHOT = {
     "file": "m01-register.png",
-    "stage": "mobile",
-    "title": "Registration, on the iOS simulator",
+    "stage": "simulator",
+    "title": "Running on an iOS simulator",
     "note": (
-        "Fraunces display type, the +234 prefix fixed rather than a country "
-        "picker, date of birth gating at 18, and terms as an explicit checkbox."
+        "The real app on a device, device chrome and all — proof it runs, not "
+        "just that its widgets paint."
     ),
 }
+
+# Every consumer screen, rendered by mobile/test/design/screen_goldens_test.dart
+# and referenced in place rather than copied, so regenerating the goldens
+# (`flutter test test/design/screen_goldens_test.dart --update-goldens`)
+# updates this page with no second step and no chance of a stale duplicate.
+GOLDEN_DIR = "../mobile/test/design/goldens"
+MOBILE_GOLDENS: list[dict] = [
+    {"file": "register.png", "title": "Register",
+     "note": "The +234 prefix is fixed rather than a country picker, date of "
+             "birth gates at 18, and terms are an explicit checkbox."},
+    {"file": "otp.png", "title": "One-time code",
+     "note": "Delivered to Mailhog in V0.5 rather than by SMS."},
+    {"file": "password.png", "title": "Set a password",
+     "note": "Two rules gate the button — ten characters and a letter/number "
+             "mix. The third line is advisory and always passes."},
+    {"file": "welcome.png", "title": "Welcome",
+     "note": "Auto-advances to Home after 800ms, which is why its golden is "
+             "captured at 300ms."},
+    {"file": "home.png", "title": "Home",
+     "note": "Wallet chip, the active draw, and the commitment shown to the "
+             "consumer before the reveal — the same hash the public proof "
+             "page publishes."},
+    {"file": "skill-question.png", "title": "Skill question",
+     "note": "Mandatory on every paid entry. This is the mechanism that makes "
+             "Atlas a prize competition rather than a lottery."},
+    {"file": "winner-claim.png", "title": "Winner claim",
+     "note": "Post-reveal claim surface."},
+]
 
 
 def log(msg: str) -> None:
@@ -391,24 +419,33 @@ def write_page() -> None:
         for shot in section["shots"]:
             parts += [block(shot), ""]
 
-    if (SHOT_DIR / MOBILE_SHOT["file"]).exists():
+    parts += [
+        "## Mobile",
+        "",
+        "Every consumer screen, rendered from",
+        "`mobile/test/design/screen_goldens_test.dart`. These are golden files, so a UI",
+        "change shows up as an image diff in the pull request that caused it. Refresh",
+        "them with:",
+        "",
+        "```bash",
+        "cd mobile && flutter test test/design/screen_goldens_test.dart --update-goldens",
+        "```",
+        "",
+        "They render real typography because the faces are bundled under",
+        "`mobile/assets/google_fonts/` rather than fetched at runtime.",
+        "",
+    ]
+    for shot in MOBILE_GOLDENS:
         parts += [
-            "## Mobile",
-            "",
-            "Flutter on an iOS simulator, built from the `ios/` scaffolding added in W8 —",
-            "the platform directories had never existed, so the app could not be run at all",
-            "before then.",
-            "",
-            block(MOBILE_SHOT),
-            "",
-            "**Six further screens are built but not pictured:** `welcome`, `otp`, `password`,",
-            "`home`, `skill_question` and `winner_claim`. All are covered by the passing widget",
-            "tests. Capturing them needs either scripted taps on the simulator, which `simctl`",
-            "cannot do, or golden files — and goldens fail because the app pulls Fraunces and",
-            "Inter from Google Fonts at runtime, which the test VM cannot reach. Wiring up",
-            "`integration_test` with bundled fonts is the fix if these need regular review.",
+            (
+                f"### {shot['title']}\n\n"
+                f"{shot['note']}\n\n"
+                f"![{shot['title']}]({GOLDEN_DIR}/{shot['file']})\n"
+            ),
             "",
         ]
+    if (SHOT_DIR / MOBILE_SHOT["file"]).exists():
+        parts += [block(MOBILE_SHOT), ""]
 
     parts += [
         "---",
