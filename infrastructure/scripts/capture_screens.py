@@ -59,190 +59,175 @@ VIEWPORT = {"width": 1440, "height": 900}
 MOBILE_BUNDLE = "dev.atlas.atlasMobile"
 
 # One spec drives both the capture and the page, so a screenshot can never be
-# added without a caption or captioned without being captured. `stage` is the
-# draw state the shot was taken in, or the surface type for non-draw screens.
+# added without a caption or captioned without being captured.
+#
+# Sections follow the draw's actual timeline rather than grouping by platform,
+# because that is what the page claims to do. Consumer and operator surfaces
+# genuinely interleave: someone enters on mobile before an operator can close,
+# and the winner claims on mobile after the reveal. Grouping all of mobile at
+# the end told a tidier story than the product actually has.
+#
+# `src` is "web" for a Playwright capture under docs/screens/, or "golden" for
+# a Flutter golden referenced in place under mobile/test/design/goldens/.
+# `stage` is the draw state the surface belongs to.
 SECTIONS: list[dict] = [
     {
-        "heading": "Before the draw opens",
+        "heading": "1 · The promise, before anyone has entered",
         "intro": (
-            "The public surface exists to be checked by someone who does not trust "
-            "you. It states the free-entry route and the skill question up front "
-            "rather than burying them."
+            "The public surface exists to be checked by someone who does not "
+            "trust you. It states the free-entry route and the skill question "
+            "up front rather than burying them."
         ),
         "shots": [
-            {
-                "file": "01-how-it-works.png",
-                "stage": "public",
-                "title": "How it works",
-                "note": (
-                    "The commit-reveal protocol in plain language. Atlas is a prize "
-                    "competition, not a lottery — every draw carries a free entry "
-                    "route with identical odds, and that claim is made here."
-                ),
-            },
-            {
-                "file": "02-responsible-play.png",
-                "stage": "public",
-                "title": "Responsible play",
-                "note": "Self-exclusion and spend limits. Required by the positioning, not bolted on after.",
-            },
-            {
-                "file": "03-proof-sealed.png",
-                "stage": "sealed",
-                "title": "Public proof, before the reveal",
-                "note": (
-                    "The commitment — SHA-256 of the server seed and draw id — is "
-                    "published when the draw is created. The seed itself is withheld "
-                    "and encrypted at rest. Anyone can record this hash now and hold "
-                    "Atlas to it later."
-                ),
-            },
+            {"src": "web", "file": "01-how-it-works.png", "stage": "public",
+             "title": "How it works",
+             "note": "The commit-reveal protocol in plain language. Atlas is a "
+                     "prize competition, not a lottery — every draw carries a "
+                     "free entry route with identical odds, and that claim is "
+                     "made here."},
+            {"src": "web", "file": "02-responsible-play.png", "stage": "public",
+             "title": "Responsible play",
+             "note": "Self-exclusion and spend limits. Required by the "
+                     "positioning, not bolted on after."},
+            {"src": "web", "file": "03-proof-sealed.png", "stage": "sealed",
+             "title": "Public proof — sealed",
+             "note": "The commitment (SHA-256 of the server seed and draw id) "
+                     "is published when the draw is created. The seed itself "
+                     "is withheld and encrypted at rest. Anyone can record "
+                     "this hash now and hold Atlas to it later."},
         ],
     },
     {
-        "heading": "The operator lifecycle",
+        "heading": "2 · Entering — the consumer, on mobile",
         "intro": (
-            "A draw moves through a state machine and the console offers only the "
-            "actions the current state permits. The sequence below is that machine, "
-            "not a tour — note how the action set changes on the same screen."
+            "Nothing can be closed or revealed until people have entered, so "
+            "this comes before the operator surfaces rather than after them."
         ),
         "shots": [
-            {
-                "file": "04-login.png",
-                "stage": "auth",
-                "title": "Operator login",
-                "note": (
-                    "Reaching `/` redirects here. Until W8 the middleware guard was "
-                    "never loaded — it sat one directory above the app — so `/` "
-                    "returned 404 and the guard did nothing."
-                ),
-            },
-            {
-                "file": "05-dashboard.png",
-                "stage": "auth",
-                "title": "Dashboard",
-                "note": "Landing surface after sign-in.",
-            },
-            {
-                "file": "06-draws-list.png",
-                "stage": "index",
-                "title": "Draws",
-                "note": "The operator draw index.",
-            },
-            {
-                "file": "07-draw-open.png",
-                "stage": "sales_open",
-                "title": "Draw detail — sales open",
-                "note": (
-                    "The commitment is shown to the operator pre-reveal, the same "
-                    "value the public page carries. Only **Close draw** is offered; "
-                    "reveal is not reachable from this state."
-                ),
-            },
-            {
-                "file": "08-confirm.png",
-                "stage": "sales_open",
-                "title": "Confirming an irreversible action",
-                "note": (
-                    "Every lifecycle action is two-step. The copy says *this is not "
-                    "reversible* because it is not — a closed draw cannot reopen and "
-                    "a revealed one cannot be re-revealed."
-                ),
-            },
-            {
-                "file": "09-draw-closed.png",
-                "stage": "sales_closed",
-                "title": "Draw detail — sales closed",
-                "note": "State advanced, and the action set with it. Close is gone; reveal is the only move.",
-            },
-            {
-                "file": "10-draw-revealed.png",
-                "stage": "revealed",
-                "title": "Draw detail — revealed",
-                "note": (
-                    "Winners selected, draw terminal. The reveal writes an outbox row "
-                    "in the same transaction; the worker dispatched it in ~0.1s. The "
-                    "only remaining action is a link to the public proof."
-                ),
-            },
+            {"src": "golden", "file": "register.png", "stage": "sales_open",
+             "title": "Register",
+             "note": "The +234 prefix is fixed rather than a country picker, "
+                     "date of birth gates at 18, and terms are an explicit "
+                     "checkbox rather than implied consent."},
+            {"src": "golden", "file": "otp.png", "stage": "sales_open",
+             "title": "One-time code",
+             "note": "Delivered to Mailhog in V0.5 rather than by SMS."},
+            {"src": "golden", "file": "password.png", "stage": "sales_open",
+             "title": "Set a password",
+             "note": "Two rules gate the button — ten characters, and a mix of "
+                     "letters and numbers. The third line is advisory and "
+                     "always passes."},
+            {"src": "golden", "file": "welcome.png", "stage": "sales_open",
+             "title": "Welcome",
+             "note": "Auto-advances to Home after 800ms, which is why its "
+                     "golden is captured at 300ms."},
+            {"src": "golden", "file": "home.png", "stage": "sales_open",
+             "title": "Home",
+             "note": "Wallet chip, the active draw, and the commitment shown "
+                     "to the consumer before the reveal — the same hash the "
+                     "public proof page publishes."},
+            {"src": "golden", "file": "skill-question.png", "stage": "sales_open",
+             "title": "Skill question",
+             "note": "Mandatory on every paid entry. This is the mechanism "
+                     "that makes Atlas a prize competition rather than a "
+                     "lottery, so it is a gate rather than a formality."},
         ],
     },
     {
-        "heading": "After the reveal",
+        "heading": "3 · Closing and revealing — the operator",
+        "intro": (
+            "A draw moves through a state machine and the console offers only "
+            "the actions the current state permits. Watch the action set "
+            "change on the same screen across the next four shots — that is "
+            "the machine, not a tour of it."
+        ),
+        "shots": [
+            {"src": "web", "file": "04-login.png", "stage": "auth",
+             "title": "Operator login",
+             "note": "Reaching `/` redirects here. Until W8 the middleware "
+                     "guard was never loaded — it sat one directory above the "
+                     "app — so `/` returned 404 and the guard did nothing."},
+            {"src": "web", "file": "05-dashboard.png", "stage": "auth",
+             "title": "Dashboard",
+             "note": "Landing surface after sign-in."},
+            {"src": "web", "file": "06-draws-list.png", "stage": "index",
+             "title": "Draws",
+             "note": "The operator draw index. The sidebar shows the full "
+                     "planned operator surface; seven of those links have no "
+                     "page yet and 404 today."},
+            {"src": "web", "file": "07-draw-open.png", "stage": "sales_open",
+             "title": "Draw detail — sales open",
+             "note": "The commitment is shown to the operator pre-reveal, the "
+                     "same value the public page carries. Only **Close draw** "
+                     "is offered; reveal is not reachable from this state."},
+            {"src": "web", "file": "08-confirm.png", "stage": "sales_open",
+             "title": "Confirming an irreversible action",
+             "note": "Every lifecycle action is two-step. The copy says *this "
+                     "is not reversible* because it is not — a closed draw "
+                     "cannot reopen and a revealed one cannot be re-revealed."},
+            {"src": "web", "file": "09-draw-closed.png", "stage": "sales_closed",
+             "title": "Draw detail — sales closed",
+             "note": "State advanced, and the action set with it. Close is "
+                     "gone; reveal is the only move."},
+            {"src": "web", "file": "10-draw-revealed.png", "stage": "revealed",
+             "title": "Draw detail — revealed",
+             "note": "Winners selected, draw terminal. The reveal writes an "
+                     "outbox row in the same transaction; the worker "
+                     "dispatched it in ~0.1s. The only remaining action is a "
+                     "link to the public proof."},
+        ],
+    },
+    {
+        "heading": "4 · Checking the result — anyone",
+        "intro": (
+            "The point of the protocol: the result can be checked by someone "
+            "with no account and no reason to believe Atlas."
+        ),
+        "shots": [
+            {"src": "web", "file": "12-proof-open.png", "stage": "revealed",
+             "title": "Public proof — opened",
+             "note": "The same URL as the sealed shot in section 1, now "
+                     "carrying the server seed, the drand round and "
+                     "randomness, the tickets hash and the full winner list. "
+                     "The commitment published earlier still matches."},
+            {"src": "web", "file": "13-verify.png", "stage": "revealed",
+             "title": "Verify it yourself",
+             "note": "Copy the command, run it against the published proof, "
+                     "recompute the winner independently. The verifier is "
+                     "standalone and needs nothing from Atlas."},
+            {"src": "web", "file": "11-audit-log.png", "stage": "audit",
+             "title": "Hash-chained audit log",
+             "note": "Every event carries the hash of the one before it "
+                     "(ADR-005). Alter a historical row and every subsequent "
+                     "hash breaks, which the chain check catches on read. That "
+                     "is what makes the log evidence rather than a list."},
+        ],
+    },
+    {
+        "heading": "5 · Claiming — the winner, back on mobile",
         "intro": "",
         "shots": [
-            {
-                "file": "12-proof-open.png",
-                "stage": "revealed",
-                "title": "Public proof, opened",
-                "note": (
-                    "The same URL as the sealed shot above, now carrying the server "
-                    "seed, the drand round and randomness, the tickets hash and the "
-                    "full winner list. The commitment published earlier still matches."
-                ),
-            },
-            {
-                "file": "13-verify.png",
-                "stage": "revealed",
-                "title": "Verify it yourself",
-                "note": (
-                    "The trust story in one control. Copy the command, run it against "
-                    "the published proof, recompute the winner independently — the "
-                    "verifier is standalone and needs nothing from Atlas."
-                ),
-            },
-            {
-                "file": "11-audit-log.png",
-                "stage": "audit",
-                "title": "Hash-chained audit log",
-                "note": (
-                    "Every event carries the hash of the one before it (ADR-005). "
-                    "Alter a historical row and every subsequent hash breaks, which "
-                    "the chain check catches on read. That is what makes the log "
-                    "evidence rather than a list."
-                ),
-            },
+            {"src": "golden", "file": "winner-claim.png", "stage": "revealed",
+             "title": "Winner claim",
+             "note": "Rendered from the intersection of the tickets a user "
+                     "owns and the draw's winner list, so a user who holds no "
+                     "winning ticket sees the empty state instead."},
         ],
     },
 ]
 
 MOBILE_SHOT = {
     "file": "m01-register.png",
-    "stage": "simulator",
-    "title": "Running on an iOS simulator",
+    "title": "The app running on an iOS simulator",
     "note": (
-        "The real app on a device, device chrome and all — proof it runs, not "
-        "just that its widgets paint."
+        "Everything in section 2 and section 5 is a Flutter golden — a widget "
+        "render, not a device. This is the same build on a booted simulator, "
+        "device chrome and all, as evidence the app runs rather than merely "
+        "paints."
     ),
 }
 
-# Every consumer screen, rendered by mobile/test/design/screen_goldens_test.dart
-# and referenced in place rather than copied, so regenerating the goldens
-# (`flutter test test/design/screen_goldens_test.dart --update-goldens`)
-# updates this page with no second step and no chance of a stale duplicate.
 GOLDEN_DIR = "../mobile/test/design/goldens"
-MOBILE_GOLDENS: list[dict] = [
-    {"file": "register.png", "title": "Register",
-     "note": "The +234 prefix is fixed rather than a country picker, date of "
-             "birth gates at 18, and terms are an explicit checkbox."},
-    {"file": "otp.png", "title": "One-time code",
-     "note": "Delivered to Mailhog in V0.5 rather than by SMS."},
-    {"file": "password.png", "title": "Set a password",
-     "note": "Two rules gate the button — ten characters and a letter/number "
-             "mix. The third line is advisory and always passes."},
-    {"file": "welcome.png", "title": "Welcome",
-     "note": "Auto-advances to Home after 800ms, which is why its golden is "
-             "captured at 300ms."},
-    {"file": "home.png", "title": "Home",
-     "note": "Wallet chip, the active draw, and the commitment shown to the "
-             "consumer before the reveal — the same hash the public proof "
-             "page publishes."},
-    {"file": "skill-question.png", "title": "Skill question",
-     "note": "Mandatory on every paid entry. This is the mechanism that makes "
-             "Atlas a prize competition rather than a lottery."},
-    {"file": "winner-claim.png", "title": "Winner claim",
-     "note": "Post-reveal claim surface."},
-]
 
 
 def log(msg: str) -> None:
@@ -392,24 +377,80 @@ def capture_mobile() -> bool:
     return True
 
 
+def validate_spec() -> None:
+    """Keep SECTIONS and the capture sequence honest about each other.
+
+    capture_web() drives the browser in a fixed order rather than iterating
+    SECTIONS, so the two can drift: a shot could be captured with no caption,
+    or captioned and never captured. Checking both directions after the fact
+    is what makes the "one spec" claim in the module docstring true.
+    """
+    web = {s["file"] for sec in SECTIONS for s in sec["shots"]
+           if s.get("src") == "web"}
+    golden = {s["file"] for sec in SECTIONS for s in sec["shots"]
+              if s.get("src") == "golden"}
+
+    missing_golden = [
+        f for f in sorted(golden)
+        if not (REPO_ROOT / "mobile" / "test" / "design" / "goldens" / f).exists()
+    ]
+    if missing_golden:
+        die(
+            "captioned goldens do not exist: "
+            + ", ".join(missing_golden)
+            + "\nRun: cd mobile && flutter test "
+            "test/design/screen_goldens_test.dart --update-goldens"
+        )
+    globals()["_EXPECTED_WEB"] = web
+
+
+def verify_captures() -> None:
+    """Every captioned web shot exists, and nothing extra is lying around."""
+    expected = globals().get("_EXPECTED_WEB", set())
+    on_disk = {p.name for p in SHOT_DIR.glob("*.png")}
+    missing = sorted(expected - on_disk)
+    if missing:
+        die("captioned but not captured: " + ", ".join(missing))
+    extra = sorted(on_disk - expected - {MOBILE_SHOT["file"]})
+    if extra:
+        log(f"warning: captured but not captioned, so unused: {', '.join(extra)}")
+
+
 def write_page() -> None:
+    def img(shot: dict) -> str:
+        if shot.get("src") == "golden":
+            return f"{GOLDEN_DIR}/{shot['file']}"
+        return f"screens/{shot['file']}"
+
     def block(shot: dict) -> str:
+        chip = f"`{shot['stage']}`\n\n" if shot.get("stage") else ""
         return (
             f"### {shot['title']}\n\n"
-            f"`{shot['stage']}`\n\n"
+            f"{chip}"
             f"{shot['note']}\n\n"
-            f"![{shot['title']}](screens/{shot['file']})\n"
+            f"![{shot['title']}]({img(shot)})\n"
         )
 
     parts = [
         "# Visual walkthrough",
         "",
-        "Every Atlas surface, in the order a draw passes through them. Captured from",
-        "a running local stack — real Postgres, six registered consumers, a genuine",
-        "commit-reveal cycle. Nothing here is a mockup.",
+        "Every Atlas surface, in the order a draw passes through them — which",
+        "means consumer and operator screens interleave rather than being grouped",
+        "by platform. Someone has to enter before an operator can close, and the",
+        "winner claims after the reveal.",
         "",
-        "Regenerate with `infrastructure/scripts/capture_screens.py` after any UI",
-        "change; see that file's docstring for prerequisites.",
+        "Captured from a running local stack: real Postgres, six registered",
+        "consumers, a genuine commit-reveal cycle. Nothing here is a mockup.",
+        "",
+        "| | |",
+        "|---|---|",
+        "| Web surfaces | Playwright against the running admin, in `docs/screens/` |",
+        "| Mobile surfaces | Flutter goldens, in `mobile/test/design/goldens/` |",
+        "| Regenerate web | `infrastructure/scripts/capture_screens.py` |",
+        "| Regenerate mobile | `cd mobile && flutter test test/design/screen_goldens_test.dart --update-goldens` |",
+        "",
+        "Because the mobile shots are goldens, a UI change shows up as an image",
+        "diff in the pull request that caused it.",
         "",
     ]
     for section in SECTIONS:
@@ -419,38 +460,22 @@ def write_page() -> None:
         for shot in section["shots"]:
             parts += [block(shot), ""]
 
-    parts += [
-        "## Mobile",
-        "",
-        "Every consumer screen, rendered from",
-        "`mobile/test/design/screen_goldens_test.dart`. These are golden files, so a UI",
-        "change shows up as an image diff in the pull request that caused it. Refresh",
-        "them with:",
-        "",
-        "```bash",
-        "cd mobile && flutter test test/design/screen_goldens_test.dart --update-goldens",
-        "```",
-        "",
-        "They render real typography because the faces are bundled under",
-        "`mobile/assets/google_fonts/` rather than fetched at runtime.",
-        "",
-    ]
-    for shot in MOBILE_GOLDENS:
+    parts += ["---", "", "## How these were captured", ""]
+    if (SHOT_DIR / MOBILE_SHOT["file"]).exists():
         parts += [
-            (
-                f"### {shot['title']}\n\n"
-                f"{shot['note']}\n\n"
-                f"![{shot['title']}]({GOLDEN_DIR}/{shot['file']})\n"
-            ),
+            MOBILE_SHOT["note"],
+            "",
+            f"![{MOBILE_SHOT['title']}](screens/{MOBILE_SHOT['file']})",
             "",
         ]
-    if (SHOT_DIR / MOBILE_SHOT["file"]).exists():
-        parts += [block(MOBILE_SHOT), ""]
-
     parts += [
-        "---",
+        "The web shots are driven through a real draw lifecycle by Playwright,",
+        "reusing `record_demo.bootstrap_pool` so the flow cannot drift from the",
+        "rehearsal script. The mobile goldens render real typography because the",
+        "faces are bundled under `mobile/assets/google_fonts/` rather than fetched",
+        "at runtime.",
         "",
-        "Palette and type throughout are the Atlas tokens in",
+        "Palette and type are the Atlas tokens in",
         "[`_bmad-output/planning-artifacts/design/tokens.md`](../_bmad-output/planning-artifacts/design/tokens.md)",
         "— navy `#0F1E38`, brass `#C9A96A`, Fraunces and Inter.",
         "",
@@ -468,16 +493,19 @@ def main() -> int:
     args = ap.parse_args()
 
     if args.page_only:
+        validate_spec()
         write_page()
         return 0
 
     preflight()
+    validate_spec()
     draw_id = prime_pool()
     assert_sales_open(draw_id)
     log(f"capturing web surfaces for draw {draw_id}")
     asyncio.run(capture_web(draw_id))
     if args.with_mobile:
         capture_mobile()
+    verify_captures()
     write_page()
 
     total = sum(p.stat().st_size for p in SHOT_DIR.glob("*.png"))
