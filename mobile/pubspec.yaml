@@ -25,3 +25,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  # Fraunces / Inter / JetBrains Mono are bundled rather than fetched at
+  # runtime. google_fonts resolves these by filename ({Family}-{Weight}.ttf)
+  # and, with allowRuntimeFetching disabled in main(), never touches the
+  # network. Two reasons: first launch on a slow Nigerian connection no longer
+  # renders in a fallback face while the download completes, and widget tests
+  # can render real typography (the test VM has no network, which is what
+  # blocked golden captures).
+  #
+  # Weights match the discipline declared in design/tokens/typography.dart:
+  # Fraunces 400/600/700, Inter 400/500/600/700, JetBrains Mono 400.
+  assets:
+    - assets/google_fonts/

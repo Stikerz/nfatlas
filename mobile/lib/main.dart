@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'design/tokens/colours.dart';
 import 'design/tokens/spacing.dart';
@@ -10,6 +11,11 @@ import 'features/identity/register_screen.dart';
 import 'services/session_storage.dart';
 
 void main() {
+  // The faces are bundled under assets/google_fonts/, so never reach for the
+  // network: a cold launch on a slow connection would otherwise paint in a
+  // fallback face until the download landed. Also makes the app render
+  // correctly offline, and lets widget tests capture real typography.
+  GoogleFonts.config.allowRuntimeFetching = false;
   runApp(const ProviderScope(child: AtlasApp()));
 }
 
