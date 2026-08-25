@@ -16,11 +16,14 @@ import uuid
 
 from pydantic import BaseModel, ConfigDict
 
-WINNER_SELECTED_V1 = "notification.winner_selected.v1"
+# Named for the producing domain, not the consumer: a second consumer (a public
+# surface update alongside the email) must not require renaming the event.
+# See docs/events.md §Naming and emission rules.
+WINNER_SELECTED_V1 = "draw.winner_selected.v1"
 
 
 class WinnerSelectedPayload(BaseModel):
-    """Payload for `notification.winner_selected.v1`.
+    """Payload for `draw.winner_selected.v1`.
 
     Contains no PII beyond `user_id` (a UUID). The worker re-hydrates
     the winner's email at delivery time via the identity module — see

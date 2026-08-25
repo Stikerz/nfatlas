@@ -96,7 +96,7 @@ decision above, and the two places implementation diverged from the sketch.
 - `atlas.outbox.dispatcher` — static `event_name` → handler registry. An
   unregistered event fails that row only; it does not stop the worker.
 - `atlas.events` — payload schema constants, starting with
-  `notification.winner_selected.v1`.
+  `draw.winner_selected.v1`.
 
 **First producer migrated:** `atlas.draw.service.reveal_draw` previously called
 the mailhog sender directly inside a `try/except`, so a delivery failure was
