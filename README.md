@@ -99,6 +99,7 @@ make clean         # stop stack, remove volumes and build caches
 - **Tokens (colour, type, space, radius, elevation):** [`_bmad-output/planning-artifacts/design/tokens.md`](_bmad-output/planning-artifacts/design/tokens.md)
 - **Components (15 primitives + compositions):** [`_bmad-output/planning-artifacts/design/components.md`](_bmad-output/planning-artifacts/design/components.md)
 - **Wireframes (15 screens):** [`_bmad-output/planning-artifacts/design/wireframes/`](_bmad-output/planning-artifacts/design/wireframes/)
+- **Visual walkthrough (what's actually built):** [`docs/VISUAL-WALKTHROUGH.md`](docs/VISUAL-WALKTHROUGH.md) — 14 screenshots captured from a running stack, in draw-lifecycle order. Regenerate with `infrastructure/scripts/capture_screens.py`.
 
 ### Governance
 - **Agent operating model:** [`docs/AINE-AGENTS.md`](docs/AINE-AGENTS.md)
