@@ -1,21 +1,28 @@
-# Week 9 Build Plan — DRAFT, pending founder approval
+# Week 9 Build Plan — Foundation week (outbox invariant + quality debt)
 
-**Status:** draft. §9 carries 5 asks; no Day 1 code starts before they are answered.
-**Nominal week:** Mon 2026-08-31 → Fri 2026-09-04 (see §9 ask 5 — W8 compressed).
+**Status:** approved 2026-08-25. All 5 asks resolved on recommendations — see §0.
+**Start:** immediately, not the nominal Monday cadence (ask 5).
 **Phase:** opens Phase 3 per `delivery-framework.md §7`.
 
 ---
 
 ## 0. Founder decisions
 
-**None yet.** W8's plan opened with five resolved asks; this one is written before
-that conversation rather than after it. See §9.
+All 5 asks resolved on recommendations 2026-08-25.
 
-The scope in §1 is a *recommendation* with the reasoning attached, not a decision.
+| # | Ask | Decision | Impact |
+|---|---|---|---|
+| 1 | Foundation week, or Phase 3 Identity now? | **Foundation week** | Outbox invariant, events catalogue, flaky sweep, worker probes. Identity's remainder moves to W10, gated on ADR-007. |
+| 2 | How complete must the producer sweep be? | **Option (b) — gate live with an honest allowlist** | Migration continues into W10. The gate stops the debt growing; the allowlist makes the remainder visible rather than invisible. |
+| 3 | ADR-006 decrypt split | **Adaeze reads it first** | Not W9 scope. Compliance review is a §5 handoff; scheduling follows her verdict, not precedes it. |
+| 4 | Does the flaky sweep gate the week? | **Best-effort, findings reported** | A 1.6% flake does not block a week. A second 47% one would be escalated. |
+| 5 | Start date | **Immediately** | W8's five planned days ran across two calendar days; W9 follows on rather than waiting for 2026-08-31. |
+
+§9 is retained as the record of what was asked and what was recommended.
 
 ---
 
-## 1. Scope (proposed)
+## 1. Scope
 
 W9 sits on a fault line. `delivery-framework.md §7` puts **Identity (weeks 9–10)**
 at the start of Phase 3 — registration, OTP, login, MFA, KYC adapter,
@@ -36,7 +43,7 @@ Measured against the repo today:
 So Identity is genuinely ~60% done, and the remainder is gated on ADR-007 (KYC
 vendor), which is a Phase 0 procurement decision that has not landed.
 
-**Recommendation: W9 is a foundation week, and Identity's remainder starts W10.**
+**Decided (§0 ask 1): W9 is a foundation week; Identity's remainder starts W10.**
 
 ### In
 
