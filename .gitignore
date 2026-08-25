@@ -39,6 +39,8 @@ mobile/android/local.properties
 mobile/**/GeneratedPluginRegistrant.*
 mobile/**/*.g.dart
 mobile/**/*.freezed.dart
+# Golden-diff artefacts written by flutter_test on a failing comparison.
+mobile/test/**/failures/
 
 # Python
 __pycache__/

@@ -14,6 +14,7 @@
 // substitutes Ahem and every glyph is a filled box.
 import 'dart:io';
 
+import 'package:atlas_mobile/design/atlas_theme.dart';
 import 'package:atlas_mobile/design/tokens/typography.dart';
 import 'package:atlas_mobile/features/draws/draws_api.dart';
 import 'package:atlas_mobile/features/tickets/tickets_api.dart';
@@ -25,8 +26,10 @@ import 'package:atlas_mobile/features/identity/otp_screen.dart';
 import 'package:atlas_mobile/features/identity/password_screen.dart';
 import 'package:atlas_mobile/features/identity/register_screen.dart';
 import 'package:atlas_mobile/features/identity/welcome_screen.dart';
+import 'package:atlas_mobile/features/skill/skill_api.dart';
 import 'package:atlas_mobile/features/skill/skill_question_screen.dart';
 import 'package:atlas_mobile/features/winners/winner_claim_screen.dart';
+import 'package:atlas_mobile/features/winners/winners_api.dart';
 import 'package:atlas_mobile/services/session_storage.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
@@ -62,11 +65,72 @@ Future<void> _loadAppFonts() async {
   await (FontLoader('MaterialIcons')
         ..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf')))
       .load();
+
+  // Material's own widgets (FilledButton, OutlinedButton) use the default
+  // typography rather than the Atlas scale, so their labels need Roboto or
+  // they paint as blocks. Best-effort: if the Flutter version in use does not
+  // bundle it, the label falls back and the golden still shows the layout.
+  try {
+    await (FontLoader('Roboto')
+          ..addFont(rootBundle.load('fonts/Roboto-Regular.ttf')))
+        .load();
+  } on FlutterError {
+    // Not bundled by this Flutter version — leave it.
+  }
+}
+
+/// SkillQuestionScreen loads its question from the API on init. Without this
+/// its golden was a spinner.
+class _FakeSkillApi extends SkillApi {
+  _FakeSkillApi() : super(Dio());
+
+  @override
+  Future<SkillQuestion> next(String drawId) async => SkillQuestion(
+    attemptId: 'a0f1c2d3-0000-4000-8000-000000000001',
+    questionId: 'q0f1c2d3-0000-4000-8000-000000000002',
+    prompt: 'What is the capital of Nigeria?',
+    options: const <SkillOption>[
+      SkillOption(id: 'opt-1', text: 'Lagos'),
+      SkillOption(id: 'opt-2', text: 'Abuja'),
+      SkillOption(id: 'opt-3', text: 'Kano'),
+      SkillOption(id: 'opt-4', text: 'Ibadan'),
+    ],
+    expiresAt: DateTime.utc(2026, 8, 28, 13, 5),
+  );
+}
+
+/// WinnerClaimScreen renders the ticket x draw_winners intersection, so it
+/// needs both APIs to return something that actually intersects — otherwise
+/// the golden shows the empty state at best, a spinner at worst.
+class _FakeTicketsApi extends TicketsApi {
+  _FakeTicketsApi() : super(Dio());
+
+  @override
+  Future<List<TicketSummary>> listMine() async => <TicketSummary>[_ticket];
+}
+
+class _FakeWinnersApi extends WinnersApi {
+  _FakeWinnersApi() : super(Dio());
+
+  @override
+  Future<List<WinnerSummary>> listForDraw(String drawId) async =>
+      <WinnerSummary>[
+        WinnerSummary(
+          position: 0,
+          isPrimary: true,
+          ticketId: _ticket.id,
+          userId: 'user-under-test',
+          contactStatus: 'pending',
+        ),
+      ];
 }
 
 Widget _host(Widget screen) {
   return ProviderScope(
     overrides: [
+      skillApiProvider.overrideWithValue(_FakeSkillApi()),
+      ticketsApiProvider.overrideWithValue(_FakeTicketsApi()),
+      winnersApiProvider.overrideWithValue(_FakeWinnersApi()),
       // Real controller over a bare Dio: constructed but never driven, since
       // these tests only paint. Mirrors the harness the other widget tests use.
       identityControllerProvider.overrideWith(
@@ -79,7 +143,14 @@ Widget _host(Widget screen) {
       activeDrawsProvider.overrideWith((ref) async => <DrawSummary>[_draw]),
       myTicketsProvider.overrideWith((ref) async => <TicketSummary>[_ticket]),
     ],
-    child: MaterialApp(debugShowCheckedModeBanner: false, home: screen),
+    // The real app theme, not a bare MaterialApp: without it Material's own
+    // widgets pick up default styling and the goldens stop reflecting what
+    // ships.
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: atlasTheme(),
+      home: screen,
+    ),
   );
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'design/atlas_theme.dart';
 import 'design/tokens/colours.dart';
 import 'design/tokens/spacing.dart';
 import 'design/tokens/typography.dart';
@@ -27,23 +28,7 @@ class AtlasApp extends StatelessWidget {
     return MaterialApp(
       title: 'Atlas',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        scaffoldBackgroundColor: AtlasColors.surfaceBase,
-        colorScheme: const ColorScheme.light(
-          primary: AtlasColors.brandPrimary,
-          onPrimary: AtlasColors.textInverted,
-          secondary: AtlasColors.brandAccent,
-          surface: AtlasColors.surfaceBase,
-          onSurface: AtlasColors.textPrimary,
-          error: AtlasColors.stateDanger,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AtlasColors.surfaceBase,
-          foregroundColor: AtlasColors.textPrimary,
-          elevation: 0,
-        ),
-      ),
+      theme: atlasTheme(),
       home: const _SplashRouter(),
     );
   }
