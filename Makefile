@@ -44,8 +44,13 @@ demo-reset:
 	docker compose run --rm backend alembic -c migrations/alembic.ini upgrade head; \
 	docker compose run --rm backend python /infrastructure/scripts/seed_v0_5.py; \
 	docker compose run --rm backend python /infrastructure/scripts/bootstrap_superadmin.py; \
+	docker compose up -d >/dev/null 2>&1; \
 	END=$$(date +%s); \
-	echo "→ demo-reset done in $$((END - START))s (target: < 30s)"
+	echo "→ demo-reset done in $$((END - START))s (target: < 30s)"; \
+	printf '→ waiting for backend to become healthy…'; \
+	until curl -sf http://localhost:8000/healthz >/dev/null 2>&1; do printf '.'; sleep 2; done; \
+	echo ' ready'; \
+	echo "→ stack is up — backend :8000, mailhog :8025; admin :3000 still compiling (~45s)"
 
 demo-seed:
 	docker compose run --rm backend python /infrastructure/scripts/seed_v0_5.py
