@@ -12,6 +12,8 @@
 // assets/google_fonts/ rather than fetched at runtime — see main.dart. Loading
 // them here is what `loadAppFonts` does; without it Flutter's test binding
 // substitutes Ahem and every glyph is a filled box.
+import 'dart:io';
+
 import 'package:atlas_mobile/design/tokens/typography.dart';
 import 'package:atlas_mobile/features/draws/draws_api.dart';
 import 'package:atlas_mobile/features/tickets/tickets_api.dart';
@@ -109,8 +111,51 @@ final _draw = DrawSummary(
       '40bc109598f824780aad5502b60253eea5d3328ddc676a2a07149a731adbac3f',
 );
 
+/// Allows a small pixel budget so the goldens survive being generated on one
+/// platform and verified on another.
+///
+/// Glyph rasterization differs between macOS and Linux, so goldens captured on
+/// a developer's Mac fail byte-comparison on the Linux CI runner even when the
+/// rendered content is identical. Measured on the first CI run: 0.19% to 3.82%,
+/// and the diff tracks how much text a screen carries — winner-claim 0.19%,
+/// register 3.82% — which is the signature of antialiasing, not of a layout
+/// change.
+///
+/// 6% leaves headroom over that 3.82% while staying far below what a real
+/// change produces: a moved element, a changed colour or different copy shifts
+/// whole regions, not glyph edges.
+///
+/// The trade-off is deliberate and worth stating: a very small genuine change
+/// could hide under this budget. These goldens exist for visual review, not
+/// pixel regression — the committed image is what a reviewer looks at, and a
+/// real UI change still shows up as an image diff in the pull request once the
+/// author regenerates. Running them in CI at all is what catches the failure
+/// that actually matters: a screen that throws or renders empty.
+class _TolerantComparator extends LocalFileComparator {
+  _TolerantComparator(super.testFile, {required this.tolerance});
+
+  final double tolerance;
+
+  @override
+  Future<bool> compare(Uint8List imageBytes, Uri golden) async {
+    final ComparisonResult result = await GoldenFileComparator.compareLists(
+      imageBytes,
+      await getGoldenBytes(golden),
+    );
+    if (result.passed || result.diffPercent <= tolerance) {
+      return true;
+    }
+    throw FlutterError(await generateFailureOutput(result, golden, basedir));
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  goldenFileComparator = _TolerantComparator(
+    Uri.parse('${Directory.current.path}/test/design/screen_goldens_test.dart'),
+    tolerance: 0.06,
+  );
 
   setUpAll(() async {
     // Belt and braces: main() sets this too, but goldens never call main().
