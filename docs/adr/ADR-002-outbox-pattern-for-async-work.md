@@ -75,3 +75,47 @@ CREATE INDEX outbox_unprocessed_idx
 - Event payload schema is in `docs/events.md` and versioned via the `event_name` (e.g. `PaymentSucceeded.v1`); breaking changes require a new version, not a payload rewrite.
 
 V2 broker swap: a separate worker reads outbox rows and produces to the broker; existing consumers keep their in-process handlers until extracted.
+
+---
+
+## W8 execution amendment (2026-08-24)
+
+The outbox landed in Week 8 Days 2-3. This records what was built against the
+decision above, and the two places implementation diverged from the sketch.
+
+**What shipped:**
+
+- `outbox` + `outbox_dead_letter` tables (migration 0011). The unprocessed-row
+  index is partial — `ON outbox (next_attempt_at) WHERE processed_at IS NULL` —
+  so it stays small as processed rows accumulate rather than growing with the
+  table.
+- `atlas.outbox.writer` — enqueue in the caller's transaction, per §Processing
+  model. A row and the state change it describes commit or roll back together.
+- `atlas.outbox.worker` — `SELECT … FOR UPDATE SKIP LOCKED` poller, 1s interval,
+  batch 100, `max_attempts=10`, exhausted rows moved to `outbox_dead_letter`.
+- `atlas.outbox.dispatcher` — static `event_name` → handler registry. An
+  unregistered event fails that row only; it does not stop the worker.
+- `atlas.events` — payload schema constants, starting with
+  `notification.winner_selected.v1`.
+
+**First producer migrated:** `atlas.draw.service.reveal_draw` previously called
+the mailhog sender directly inside a `try/except`, so a delivery failure was
+invisible and unretried. It now writes an outbox row in the reveal transaction.
+That closes the "direct-call reveal notifications" V0.5 debt in
+`docs/AI-INTEGRATION-LOG.md §Kept-in-code shortcuts`.
+
+**Measured:** dispatch latency 0.101-0.124s from commit to `processed_at` across
+six rows in the demo rehearsal, against a 2s gate. `attempts = 0` throughout —
+no retries needed. Zero dead letters. The worker held an idle queue for ~22h
+with zero restarts and zero tracebacks.
+
+**Divergence from §Alternatives — the 1-second polling floor stands.** The
+measured latency is an order of magnitude inside the gate, so the
+LISTEN/NOTIFY amendment contemplated there is not yet warranted. Revisit only
+if a UX surface needs sub-second delivery.
+
+**Not yet true:** the forward-compat invariant in §Consequences states that
+every state change emits an outbox event, "enforced by grep in CI". Only the
+reveal producer is migrated, and no CI check enforces this. The remaining
+producers (payment, ticket, wallet) and the grep gate are W9+ work. Recording
+it here so the invariant is not mistaken for something already enforced.

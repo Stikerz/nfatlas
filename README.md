@@ -29,6 +29,29 @@ make bootstrap    # seeds Adaobi Ibe with the superadmin role
 
 Runbook: [`docs/runbooks/superadmin-bootstrap.md`](docs/runbooks/superadmin-bootstrap.md).
 
+### Required secrets
+
+`make setup` copies `.env.example`, which leaves the secrets blank; `docker-compose.yaml`
+supplies dev defaults so the local stack starts regardless. Set real values for anything
+you would not throw away:
+
+| Variable | Notes |
+|---|---|
+| `ATLAS_JWT_SIGNING_KEY` | >= 32 chars — `openssl rand -hex 32` |
+| `ATLAS_OTP_PEPPER` | >= 32 chars — `openssl rand -hex 32` |
+| `ATLAS_PAYSTACK_WEBHOOK_SECRET` | >= 16 chars |
+| `ATLAS_SERVER_SEED_KEY` | Fernet key — exactly 44 chars, url-safe base64 of 32 bytes |
+| `ATLAS_SUPERADMIN_PASSWORD` | >= 12 chars |
+
+`ATLAS_SERVER_SEED_KEY` encrypts `draws.server_seed_encrypted` at rest (ADR-006 §Stage 1,
+landed W8 Day 1). **Losing or rotating it without re-encrypting makes every committed draw
+unrevealable** — the seed cannot be recovered and the commitment cannot be opened. Rotation
+is annual and on-incident per ADR-006 §Trade-offs. Generate one with:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
 ### Fresh-clone verification checklist (Week 3 gate, plan §6)
 
 Run this on a second machine (borrowed laptop or Codespace) after `make dev` + `make bootstrap`:

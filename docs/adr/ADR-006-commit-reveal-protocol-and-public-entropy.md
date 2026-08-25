@@ -96,3 +96,49 @@ Bitcoin block hashes and drand are independent; both are public; both have well-
 - A draw cannot publish a winner without the proof inputs being recorded in the audit log first.
 - Compliance & Risk Agent reviews every draw's proof before public announcement (`AINE-AGENTS.md §6`).
 - The verifier script is published in the public repo and exercised by an integration test on every Draw Engine PR.
+
+---
+
+## W8 execution amendment (2026-08-24)
+
+Stage 1's "stored encrypted in Postgres" requirement landed in Week 8 Day 1.
+V0.5 had shipped `server_seed` as plaintext hex — an explicit, logged debt
+(`week-5-build-plan §0 ask 5`, carried in
+`docs/AI-INTEGRATION-LOG.md §Kept-in-code shortcuts`). That debt is now closed.
+
+**What shipped:**
+
+- `atlas.draw.crypto` — Fernet (AES-128-CBC + HMAC-SHA-256) over the 32-byte
+  seed. `encrypt_server_seed` / `decrypt_server_seed` are the only entry points;
+  `_fernet()` is the single place the key is unwrapped.
+- Key material from `ATLAS_SERVER_SEED_KEY`, a 44-character url-safe base64
+  Fernet key, per ADR-012 §V1 mechanism.
+- Migration 0010 re-encrypted the legacy raw-hex row in place, so no draw
+  predates the encryption.
+- Verified: round-trip and tamper-rejection tests pass; the golden-vector
+  primary winner is unchanged, confirming the refactor is transparent to the
+  reveal algorithm; a live database check found 0 raw-hex rows.
+
+**Two divergences from §Protocol stages 1, recorded so they are not mistaken
+for delivered:**
+
+1. **Key location.** Stage 1 says the encryption key lives in "the platform
+   secret manager". It is currently an environment variable. That is the
+   deliberate ADR-012 §V1 mechanism, and the Fernet token is designed to stay
+   valid as the inner-layer ciphertext under a future cloud-KMS envelope
+   (Phase 5). No re-encryption is required at that point.
+
+2. **Decrypt is not worker-only.** Stage 1 says "the decrypt permission is
+   granted to the worker process only" and that the seed is "not retrievable by
+   any operator role until the reveal phase". In the shipped design the API
+   process holds the key: `draw.service.reveal_draw` and `draw.routes.get_proof`
+   both decrypt. Encryption at rest therefore protects against database-level
+   disclosure — a stolen dump, a backup, a read-only DB credential — but not
+   against compromise of the API process itself.
+
+   The pre-reveal seal is enforced by the draw state machine rather than by key
+   custody: `get_proof` only returns `server_seed` once the draw is `revealed`.
+   That is a weaker guarantee than the ADR describes. Splitting decrypt into a
+   separate process with its own key grant is V1 hardening work and needs a
+   compliance review (`docs/AINE-AGENTS.md §3` lists Adaeze as a mandatory
+   reviewer on Draw Engine) before it is scheduled.
