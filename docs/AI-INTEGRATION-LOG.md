@@ -46,7 +46,7 @@ Each surfaces in the relevant module docstring + at least one runbook or ADR ame
 
 - ~~**`server_seed` stored as plaintext hex** in `draws.server_seed_encrypted`. TODO(week-6+) — encrypt at rest per ADR-006 §Stage 1.~~ **Closed W8 Day 1 (2026-08-24)** — Fernet encryption via `atlas.draw.crypto`, keyed from `ATLAS_SERVER_SEED_KEY`. Migration 0010 re-encrypted the seeded demo row.
 - **Paystack stub mode** (`ATLAS_PAYSTACK_STUB_MODE=true`) default in V0.5. Production must be `false` (config validator enforces).
-- **Direct-call reveal notifications** via mailhog with try/except. V1 replaces with the outbox pattern per ADR-002.
+- ~~**Direct-call reveal notifications** via mailhog with try/except. V1 replaces with the outbox pattern per ADR-002.~~ **Closed W8 Day 3 (2026-08-24)** — `reveal_draw` now writes a `notification.winner_selected.v1` row in the same transaction; `atlas.outbox.worker` dispatches it. Measured dispatch latency 0.10-0.12s.
 - **BLS drand signature verification** deferred. `drand_signature` persisted for later replay-verify per week-6-build-plan §6 risk 3.
 - **Demo mode** (`ATLAS_DEMO_MODE=true`) compresses seed-draw timings to 10 min. Prod-safety validator refuses `demo_mode=true` in production.
 - **`WALLET_ALLOW_STUB_DRAW`** was true through W4, flipped to false in W5 Day 1 when real `draws.id` existed.
@@ -78,6 +78,10 @@ Each row corresponds to one visible unit of scoped work in the Claude Code sessi
 | 17 | 2026-07-29 → 2026-07-31 | 💻 Amelia | W7 Days 1-5 demo-mode + public /proof SSR + trust-story pages + admin CRUD + mobile write-side + rehearsal script | `admin/src/app/(public)/proof/[drawId]`, `admin/src/app/(admin)/admin/{draws,audit-log}`, mobile `skill_question_screen` + `winner_claim_screen`, `infrastructure/scripts/demo_rehearsal.sh` |
 | 18 | 2026-07-31 | 💻 Amelia | V0.5 close doc + rehearsal validated end-to-end | `_bmad-output/implementation-artifacts/v0.5-close.md`, `9d28403` rehearsal-fixes commit |
 | 19 | 2026-08-03 | 💻 Amelia | Mobile analyzer cleanup — all 30 info-level lints resolved; CI tightened | `87ae231` + `de25353`; `flutter analyze --no-fatal-infos` escape hatch removed |
+| 20 | 2026-08-24 | 💻 Amelia | W8 Days 1-3 — Fernet-encrypted `server_seed` at rest; outbox table + writer; worker + dispatcher, reveal producer migrated off direct-call | `atlas.draw.crypto`, `atlas.outbox.{writer,worker,dispatcher}`, migrations 0010+0011, `docs/runbooks/outbox-dead-letter.md`, `docs/events.md` (created W8 Day 5 — cited by ADR-001/002 but had never existed) |
+| 21 | 2026-08-24 | 💻 Amelia | W8 Day 4 — Playwright hero-flow recording script + OBS fallback runbook | `infrastructure/scripts/record_demo.py`, `docs/runbooks/demo-recording-obs-fallback.md` |
+| 22 | 2026-08-24 | 🛡️ Tobi + 💻 Amelia + 🧪 Murat | Fresh-machine dev setup on a bare laptop; five blocking defects fixed; `main` returned to green after 4 red commits | PRs #1-#5: `backend/Dockerfile.backend` (dev stage), `admin/src/middleware.ts`, `.github/workflows/ci.yaml` (ADR-012 whitelist), `mobile/{ios,android,web}` scaffolding, three flaky-test fixes |
+| 23 | 2026-08-25 | 📚 Paige | W8 Day 5 — success gates verified with evidence; this log, ADR-002/006 amendments, README + close-doc sync | `docs/AI-INTEGRATION-LOG.md`, `docs/adr/ADR-002*.md`, `docs/adr/ADR-006*.md`, `README.md`, `_bmad-output/implementation-artifacts/v0.5-close.md` |
 
 ---
 
@@ -117,6 +121,15 @@ Each row corresponds to one visible unit of scoped work in the Claude Code sessi
 - Mobile hero flow: home wallet chip + draw browse + skill question + Paystack checkout → external browser + tickets + winner claim.
 - New helper: `infrastructure/scripts/demo_rehearsal.sh` (14-step API smoke).
 - Gate close doc: `_bmad-output/implementation-artifacts/v0.5-close.md`.
+
+### Week 8 (V1 hardening: encrypted seed + outbox + fallback recording)
+
+- Server-seed encryption at rest: `atlas.draw.crypto` (Fernet, keyed from `ATLAS_SERVER_SEED_KEY`), migration 0010 re-encrypts legacy rows.
+- Outbox: `outbox` + `outbox_dead_letter` tables (migration 0011, partial index on unprocessed rows), `atlas.outbox.{writer,worker,dispatcher}`, `atlas.events`.
+- Reveal notifications migrated from direct-call to outbox producer/consumer per ADR-002.
+- Demo-day fallback: `infrastructure/scripts/record_demo.py` + `docs/runbooks/demo-recording-obs-fallback.md`.
+- Operations: `docs/runbooks/outbox-dead-letter.md`.
+- Local dev + CI: backend `dev` image stage, mobile platform scaffolding, ADR-012 `get_secret_value` whitelist extended to `draw/crypto.py` + `outbox/worker.py`.
 
 ---
 
@@ -329,6 +342,65 @@ notes: |
 ---
 ```
 
+### 2026-08-25 — Week 8 gate close (encrypted seed + outbox + fallback recording)
+
+```yaml
+---
+ts: 2026-08-25T00:00:00Z
+agent: bmad-agent-dev (Amelia) + bmad-tea (Murat) + bmad-agent-tech-writer (Paige)
+session: continuous
+artefact:
+  - atlas.draw.crypto + migration 0010
+  - atlas.outbox.{writer,worker,dispatcher} + atlas.events + migration 0011
+  - infrastructure/scripts/record_demo.py
+  - docs/runbooks/{outbox-dead-letter,demo-recording-obs-fallback}.md
+  - docs/adr/ADR-002 + ADR-006 (W8 execution amendments)
+operation: closed
+inputs:
+  - _bmad-output/implementation-artifacts/week-8-build-plan.md §8 success gates
+  - CI run on main @ e3cfad4 — all four jobs green
+human_review:
+  reviewer: S1408661
+  status: approved
+  comments: |
+    Gate 8 (outbox dead-letter runbook reviewed by Tobi) is a human gate and
+    is recorded as "exists"; it is not self-certifiable by an agent.
+notes: |
+  All 11 §8 gates verified with evidence rather than assertion:
+
+    1. crypto round-trip + tamper reject — 17 tests pass.
+    2. no raw-hex server_seed — 0 raw hex, 1 Fernet token (gAAAAAB...).
+    3. golden-vector winner unchanged — 10 reveal-algorithm tests pass.
+    4. outbox migration up/down — downgrade dropped both tables, upgrade
+       restored them plus the outbox_unprocessed_idx partial index.
+    5. worker dispatch within 2s — measured 0.101-0.124s across 6 rows,
+       attempts=0, zero dead letters, 6 winner emails delivered.
+    6. worker stable on an idle queue — 0 restarts, 0 tracebacks, ~22h up.
+    7. demo_rehearsal.sh green with the worker in the loop.
+    8. docs/runbooks/outbox-dead-letter.md exists (Tobi review is a human gate).
+    9. OBS fallback runbook committed; record_demo.py additionally produces
+       an 18.6s 1440x900 webm now that its three blocking defects are fixed.
+   10. this entry.
+   11. CI green on main @ e3cfad4.
+
+  Gate 11 is the notable one: main had been red since W8 Day 1 (80cffce).
+  The module-boundaries job failed its ADR-012 get_secret_value step because
+  Day 1 and Day 3 each added a legitimate SecretStr unwrap without extending
+  the whitelist. Four consecutive commits reported failure while the gate
+  enforced nothing. Closed in PR #2.
+
+  Three flaky tests were found and fixed in the same window, all one bug
+  class — a "make it different" step that can silently produce something
+  identical:
+    - skill-question answer collision, ~47% (v0.5-close gate #1 was passing
+      on a coin flip),
+    - test_different_minute_may_rotate, ~4%,
+    - test_tampered_signature_rejected, ~1.6% (measured 1.56% over 50k
+      signatures, matching 1/64 exactly).
+  A deliberate sweep for the pattern is worth a slot in W9.
+---
+```
+
 ---
 
 ## What's next
@@ -337,7 +409,8 @@ Post-V0.5 items tracked in `v0.5-close.md`:
 
 - Monday founder walkthrough (all 16 flagship steps in mobile + admin, single sitting).
 - Cold-start + fresh-clone timing on a second engineer's laptop.
-- Optional: Playwright automated recording of the operator flow (backend rehearsal + Playwright would give a fully reproducible mp4 fallback).
-- V1 hardening path: real KYC vendor, WhatsApp, encrypted server_seed at rest, full outbox, reconciliation cron, multi-draw browsing, refund UX.
+- ~~Optional: Playwright automated recording of the operator flow.~~ Landed W8 Day 4 — `infrastructure/scripts/record_demo.py`.
+- V1 hardening path: real KYC vendor, WhatsApp, reconciliation cron, multi-draw browsing, refund UX. ~~Encrypted server_seed at rest~~ closed W8 Day 1; the outbox is ~~scaffolded~~ but only the reveal producer is migrated — payment, ticket and wallet producers plus the CI grep gate are W9+ (ADR-002 §W8 execution amendment).
+- W9 candidate: sweep the suite for the flaky-test pattern found three times in W8 — a "make it different" step that can silently produce something identical.
 
 Every new session appends here per the AINE-AGENTS.md §7 discipline.
