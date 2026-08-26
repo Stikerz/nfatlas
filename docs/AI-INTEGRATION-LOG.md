@@ -46,7 +46,7 @@ Each surfaces in the relevant module docstring + at least one runbook or ADR ame
 
 - ~~**`server_seed` stored as plaintext hex** in `draws.server_seed_encrypted`. TODO(week-6+) — encrypt at rest per ADR-006 §Stage 1.~~ **Closed W8 Day 1 (2026-08-24)** — Fernet encryption via `atlas.draw.crypto`, keyed from `ATLAS_SERVER_SEED_KEY`. Migration 0010 re-encrypted the seeded demo row.
 - **Paystack stub mode** (`ATLAS_PAYSTACK_STUB_MODE=true`) default in V0.5. Production must be `false` (config validator enforces).
-- ~~**Direct-call reveal notifications** via mailhog with try/except. V1 replaces with the outbox pattern per ADR-002.~~ **Closed W8 Day 3 (2026-08-24)** — `reveal_draw` now writes a `notification.winner_selected.v1` row in the same transaction; `atlas.outbox.worker` dispatches it. Measured dispatch latency 0.10-0.12s.
+- ~~**Direct-call reveal notifications** via mailhog with try/except. V1 replaces with the outbox pattern per ADR-002.~~ **Closed W8 Day 3 (2026-08-24)** — `reveal_draw` now writes a `draw.winner_selected.v1` row in the same transaction (emitted in W8 as `notification.winner_selected.v1`; renamed W9 Day 1 per `docs/events.md §Naming and emission rules`); `atlas.outbox.worker` dispatches it. Measured dispatch latency 0.10-0.12s.
 - **BLS drand signature verification** deferred. `drand_signature` persisted for later replay-verify per week-6-build-plan §6 risk 3.
 - **Demo mode** (`ATLAS_DEMO_MODE=true`) compresses seed-draw timings to 10 min. Prod-safety validator refuses `demo_mode=true` in production.
 - **`WALLET_ALLOW_STUB_DRAW`** was true through W4, flipped to false in W5 Day 1 when real `draws.id` existed.

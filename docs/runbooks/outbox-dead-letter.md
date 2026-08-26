@@ -1,6 +1,6 @@
 # Runbook: Outbox dead-letter — inspect + replay
 
-**Severity:** SEV-3 by default; escalate to SEV-2 if a real-money `notification.winner_selected.v1` event is dead-lettered (a winner hasn't been notified).
+**Severity:** SEV-3 by default; escalate to SEV-2 if a real-money `draw.winner_selected.v1` event is dead-lettered (a winner hasn't been notified).
 **Owner:** DevSecOps on-call → notify EL if any winner event lands here in prod.
 **Last verified:** 2026-08-26 by 💻 Amelia (W8 Day 3 first draft — awaiting Tobi review per week-8-build-plan §5).
 **Applies to:** V1 outbox rows that exhausted their retry budget (`attempts >= ATLAS_OUTBOX_MAX_ATTEMPTS`, default 10). V0.5 workloads are low volume — a dead-letter row is almost always a real problem, not a transient blip.
@@ -21,7 +21,7 @@
 
 - **Users:** varies by event. Winner-notification events have the highest impact (silent failure of the promised prize touch). All other event types are internal-only in V0.5.
 - **Data:** none. `outbox_dead_letter` is terminal storage — no data is lost; the row + full payload sit there indefinitely until an operator acts.
-- **Regulatory:** for prize-competition compliance, the primary-winner notification is expected within a reasonable window. A dead-letter row on `notification.winner_selected.v1` is a compliance incident if unresolved > 24h.
+- **Regulatory:** for prize-competition compliance, the primary-winner notification is expected within a reasonable window. A dead-letter row on `draw.winner_selected.v1` is a compliance incident if unresolved > 24h.
 
 ## Investigate
 
@@ -97,5 +97,5 @@ Never `TRUNCATE outbox_dead_letter` — it's the last record of a failure. Grow 
 ## Escalate
 
 - SEV-3 → resolve within the shift, note in the daily standup.
-- SEV-2 (a `notification.winner_selected.v1` row that's blocked > 4h) → page the on-call engineer, notify EL.
+- SEV-2 (a `draw.winner_selected.v1` row that's blocked > 4h) → page the on-call engineer, notify EL.
 - SEV-1 (a real-money primary winner's notification blocked > 24h) → page EL + Compliance & Risk (Adaeze).
