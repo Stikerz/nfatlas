@@ -121,11 +121,28 @@ services:
       mailhog:
         condition: service_started
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      # Fails when the poll loop stops completing cycles. The previous check
+      # ran `sys.exit(0)`, which only asserted that the interpreter starts —
+      # it reported healthy through a wedged loop, and W8 gate 6 leaned on it.
+      # 30s is 30 poll intervals; well clear of a slow cycle, tight enough to
+      # catch a stall before the next dispatch matters.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import pathlib, sys, time
+          p = pathlib.Path("/tmp/atlas-outbox-worker.heartbeat")
+          if not p.exists():
+              sys.exit("no heartbeat yet")
+          age = time.time() - float(p.read_text())
+          sys.exit(0 if age < 30 else f"heartbeat stale: {age:.0f}s")
       interval: 15s
       timeout: 3s
       retries: 3
-      start_period: 5s
+      # 20s, not the previous 5s: the first heartbeat lands after the first
+      # completed poll cycle, which is behind DB connect + migration wait.
+      start_period: 20s
 
   admin:
     image: node:20-alpine

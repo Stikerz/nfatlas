@@ -21,8 +21,20 @@ setup:
 dev:
 	docker compose up --build
 
+# Tests run against their own database, not the dev one. The worker container
+# polls the dev DB every second and consumes outbox rows with FOR UPDATE SKIP
+# LOCKED, so a test asserting on its own in-process delivery loses the race
+# roughly 1 run in 5 — measured 3/15 with the worker up, 0/15 with it stopped.
+# CI never saw it because its backend job runs no worker and already uses a
+# separate `atlas_test` database; this makes local match CI.
+ATLAS_TEST_DB ?= atlas_test
+_TEST_DB_URL = postgresql+asyncpg://$${ATLAS_POSTGRES_USER:-atlas}:$${ATLAS_POSTGRES_PASSWORD:-atlas_dev_password}@postgres:5432/$(ATLAS_TEST_DB)
+
 test:
-	docker compose run --rm backend pytest -ra
+	@docker compose exec -T postgres psql -U $${ATLAS_POSTGRES_USER:-atlas} -d postgres \
+	  -tAc "SELECT 1 FROM pg_database WHERE datname='$(ATLAS_TEST_DB)'" | grep -q 1 \
+	  || docker compose exec -T postgres createdb -U $${ATLAS_POSTGRES_USER:-atlas} $(ATLAS_TEST_DB)
+	docker compose run --rm -e ATLAS_DATABASE_URL="$(_TEST_DB_URL)" backend pytest -ra
 	cd admin && pnpm test
 
 lint:

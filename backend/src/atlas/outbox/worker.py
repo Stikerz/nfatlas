@@ -20,7 +20,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import (
@@ -120,6 +122,21 @@ async def run_once(
     return len(rows)
 
 
+# Touched after every completed poll cycle. The container healthcheck reads its
+# mtime, so a wedged or crash-looping loop stops looking healthy — the previous
+# check only asserted that the interpreter starts, which it does either way.
+HEARTBEAT_PATH = Path("/tmp/atlas-outbox-worker.heartbeat")
+
+
+def _beat() -> None:
+    """Record that a poll cycle completed. Never fatal: a worker that cannot
+    write its heartbeat should keep dispatching, not die."""
+    try:
+        HEARTBEAT_PATH.write_text(str(time.time()))
+    except OSError:
+        logger.warning("outbox worker: could not write heartbeat", exc_info=True)
+
+
 async def run_forever(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
     """Poll loop with 1-second floor per ADR-002 §Trade-offs."""
     settings = get_settings()
@@ -139,6 +156,9 @@ async def run_forever(sessionmaker: async_sessionmaker[AsyncSession]) -> None:
                 await run_once(
                     session, batch_size=batch_size, max_attempts=max_attempts
                 )
+            # Only after a clean cycle: a loop that throws every time must not
+            # keep reporting itself alive.
+            _beat()
         except Exception:
             logger.exception("outbox worker cycle crashed; will retry after sleep")
         await asyncio.sleep(poll_interval)
