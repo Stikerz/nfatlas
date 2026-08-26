@@ -119,3 +119,53 @@ every state change emits an outbox event, "enforced by grep in CI". Only the
 reveal producer is migrated, and no CI check enforces this. The remaining
 producers (payment, ticket, wallet) and the grep gate are W9+ work. Recording
 it here so the invariant is not mistaken for something already enforced.
+
+---
+
+## W9 amendment (2026-08-26) — the invariant, restated and enforced
+
+The W8 amendment above recorded that §Consequences' forward-compat invariant —
+*"every state change emits an outbox event (enforced by grep in CI)"* — was not
+true, with one producer against a whole codebase of state changes. W9 Day 1
+inventoried the gap and found it is not what the sentence implies.
+
+**Restated:**
+
+> Every state change that **triggers work outside its own transaction** emits an
+> outbox event.
+
+Held literally, the original wording requires a producer for all 28 recorded
+state changes. Twelve of those have no consumer, and
+`atlas/outbox/worker.py` dead-letters an unregistered event on the **first
+attempt** with no retry — so emitting ahead of a consumer does not prepare for
+later, it manufactures dead-letter rows that are not failures and poisons the
+signal `runbooks/outbox-dead-letter.md` tells operators to act on. The
+alternative, a no-op handler per event, is a payload schema and a handler
+carrying zero behaviour, and quietly redefines the invariant as "we emit
+everything" rather than "everything that must survive a crash does".
+
+The restated form is what the pattern is for, and it is enforceable.
+
+**Enforcement** is `backend/tools/check_outbox_invariant.py`, wired into the
+`module-boundaries` job. It is AST-based rather than grep-based because the
+question — does the function containing this `audit.append` also emit? — is
+about scope, not text; a grep finds both calls in a file but cannot tell whether
+they share a function. `ci.yaml`'s own comment anticipated this ("will be
+replaced by an AST check when scope grows").
+
+State changes are identified as `audit.append` call sites, since ADR-005 makes
+that the recorded state-change surface. The checker's `ALLOWLIST` carries every
+event deliberately without a producer, **with a reason each** — 15 that should
+never emit, and 13 deferred until a consumer exists, each naming its trigger.
+
+Verified in three directions rather than assumed: a planted non-emitting state
+change fails with the file, line and event name; adding an emit to the same
+function passes; removing a single allowlist entry fails on that entry. A gate
+never seen to fail is not known to work, and the `get_secret_value` step in this
+same job sat red for four commits in W8 while enforcing nothing.
+
+**Naming.** §Forward-compat invariants gives `PaymentSucceeded.v1` as the
+example. Shipped practice is `<producing-domain>.<what-happened>.v<n>` —
+`draw.winner_selected.v1` — which matches the 28 audit event names already in
+the codebase, so one convention spans both namespaces. The example above is
+superseded; see `docs/events.md §Naming and emission rules`.

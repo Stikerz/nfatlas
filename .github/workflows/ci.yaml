@@ -108,7 +108,9 @@ jobs:
     # Enforces two invariants per week-3-build-plan §4.4 + ADR-005:
     #   1. No SELECT/INSERT on users|otps|sessions outside atlas/identity/.
     #   2. Every audit_log write goes through atlas/audit_log/writer.py.
-    # Grep-only; will be replaced by an AST check when scope grows.
+    # Grep-only, except the ADR-002 outbox step below: answering "does the
+    # function containing this audit.append also emit?" is a question about
+    # scope, not text, so that one is the AST check this comment anticipated.
     name: Module boundaries
     runs-on: ubuntu-latest
     steps:
@@ -263,3 +265,13 @@ jobs:
             echo "::error::get_secret_value() is restricted; add the module to the whitelist in ci.yaml if genuinely needed."
             exit 1
           fi
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: outbox invariant (ADR-002)
+        # Every state change that triggers work outside its own transaction
+        # emits an outbox event. State changes are audit.append call sites
+        # (ADR-005 makes that the recorded surface); the allowlist in the
+        # checker records the ones deliberately left without a producer, with
+        # a reason each. See docs/events.md §Producer inventory.
+        run: python backend/tools/check_outbox_invariant.py
