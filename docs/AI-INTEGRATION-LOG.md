@@ -82,6 +82,12 @@ Each row corresponds to one visible unit of scoped work in the Claude Code sessi
 | 21 | 2026-08-24 | 💻 Amelia | W8 Day 4 — Playwright hero-flow recording script + OBS fallback runbook | `infrastructure/scripts/record_demo.py`, `docs/runbooks/demo-recording-obs-fallback.md` |
 | 22 | 2026-08-24 | 🛡️ Tobi + 💻 Amelia + 🧪 Murat | Fresh-machine dev setup on a bare laptop; five blocking defects fixed; `main` returned to green after 4 red commits | PRs #1-#5: `backend/Dockerfile.backend` (dev stage), `admin/src/middleware.ts`, `.github/workflows/ci.yaml` (ADR-012 whitelist), `mobile/{ios,android,web}` scaffolding, three flaky-test fixes |
 | 23 | 2026-08-25 | 📚 Paige | W8 Day 5 — success gates verified with evidence; this log, ADR-002/006 amendments, README + close-doc sync | `docs/AI-INTEGRATION-LOG.md`, `docs/adr/ADR-002*.md`, `docs/adr/ADR-006*.md`, `README.md`, `_bmad-output/implementation-artifacts/v0.5-close.md` |
+| 24 | 2026-08-25 | 📚 Paige + 🎨 Sally | Visual walkthrough — 14 screenshots from a running stack, generator script, mobile font bundling + 7 screen goldens | `docs/VISUAL-WALKTHROUGH.md`, `docs/screens/`, `infrastructure/scripts/capture_screens.py`, `mobile/assets/google_fonts/`, `mobile/test/design/` |
+| 25 | 2026-08-25 | 💻 Amelia | W9 build plan drafted with 5 open asks; approved as a foundation week | `_bmad-output/implementation-artifacts/week-9-build-plan.md` |
+| 26 | 2026-08-25 → 08-26 | 💻 Amelia + 🏗️ Winston | W9 Day 1 — outbox producer inventory (28 state-change sites) + architecture review: naming rule, emission rule, and why nothing migrates | `docs/events.md` §Naming and emission rules, §Producer inventory |
+| 27 | 2026-08-26 | 💻 Amelia + 🛡️ Tobi | W9 Day 3 — ADR-002 invariant restated and enforced by an AST check in CI | `backend/tools/check_outbox_invariant.py`, `.github/workflows/ci.yaml`, ADR-002 §W9 amendment |
+| 28 | 2026-08-26 | 🧪 Murat + 🛡️ Tobi | W9 Day 4 — test database isolated from the dev stack; real worker liveness probe | `Makefile`, `docker-compose.yaml`, `atlas.outbox.worker` |
+| 29 | 2026-08-26 | 📚 Paige | W9 Day 5 — gate close, this entry, events catalogue status | `docs/AI-INTEGRATION-LOG.md`, `docs/events.md` |
 
 ---
 
@@ -130,6 +136,15 @@ Each row corresponds to one visible unit of scoped work in the Claude Code sessi
 - Demo-day fallback: `infrastructure/scripts/record_demo.py` + `docs/runbooks/demo-recording-obs-fallback.md`.
 - Operations: `docs/runbooks/outbox-dead-letter.md`.
 - Local dev + CI: backend `dev` image stage, mobile platform scaffolding, ADR-012 `get_secret_value` whitelist extended to `draw/crypto.py` + `outbox/worker.py`.
+
+### Week 9 (foundation: outbox invariant enforced + quality debt)
+
+- Producer inventory: 28 audit-recorded state changes classified — 1 emitting, 13 deferred with named triggers, 14 correctly without a producer (`docs/events.md §Producer inventory`).
+- Event naming rule: `<producing-domain>.<what-happened>.v<n>`. The shipped event was renamed off its consumer prefix to `draw.winner_selected.v1`.
+- ADR-002 invariant restated to "every state change that triggers work outside its own transaction", and enforced by `backend/tools/check_outbox_invariant.py` in the `module-boundaries` job — the AST check `ci.yaml` anticipated.
+- Test database isolated from the dev stack (`make test` targets `atlas_test`), closing a 20%-rate e2e flake.
+- Outbox worker liveness probe replacing a healthcheck that only asserted the interpreter starts.
+- `docs/events.md` created W8, populated W9; owner 🏗️ Winston per `AINE-AGENTS.md §4`.
 
 ---
 
@@ -401,6 +416,74 @@ notes: |
 ---
 ```
 
+### 2026-08-26 — Week 9 gate close (outbox invariant enforced)
+
+```yaml
+---
+ts: 2026-08-26T00:00:00Z
+agent: bmad-agent-dev (Amelia) + bmad-agent-architect (Winston) + bmad-tea (Murat)
+session: continuous
+artefact:
+  - docs/events.md — naming rules, emission rules, producer inventory
+  - backend/tools/check_outbox_invariant.py + .github/workflows/ci.yaml
+  - docs/adr/ADR-002 §W9 amendment
+  - Makefile, docker-compose.yaml, atlas.outbox.worker
+operation: closed
+inputs:
+  - _bmad-output/implementation-artifacts/week-9-build-plan.md §8 success gates
+  - §0 asks 1-5, all resolved on recommendations 2026-08-25
+human_review:
+  reviewer: S1408661
+  status: approved
+  comments: |
+    Approved as a foundation week on recommendations. Ask 3 (ADR-006
+    decrypt-not-worker-only) remains owed from Adaeze and is NOT closed by
+    this entry.
+notes: |
+  Nine §8 gates. Seven met as written, two met differently, and the difference
+  is the week's main finding.
+
+  Met as written:
+    1  28 state-change sites classified, a written reason on each non-emitter.
+    4  CI gate live, failure mode demonstrated three ways: planted violation
+       fails naming file/line/event; adding an emit passes; removing one
+       allowlist entry fails on that entry.
+    5  ADR-002 amended before the gate landed, so the gate enforces a rule the
+       ADR states.
+    6  Worker healthcheck proven in three directions — live healthy, SIGSTOP'd
+       unhealthy, resumed healthy, RestartCount 0 throughout.
+    7  Sweep found no new instances of the W8 "make it different" class. It did
+       resolve the e2e intermittent: measured 3/15 with the worker running,
+       0/15 stopped, 0/15 with an isolated DB.
+    8  Rehearsal green; 282 backend + 5 admin tests green; CI green on main.
+    9  This entry.
+
+  Met differently, per §0 ask 2:
+    2  "Every must-emit function emits" — none does, and none could. Of 13
+       classified must-emit, 11 have no consumer and outbox/worker.py
+       dead-letters an unregistered event on the first attempt with no retry;
+       otp.issued cannot carry a plaintext code in a payload without breaking
+       the invariant at otp_service.py:5. The founder decision chose the gate
+       plus an honest allowlist over forced migration.
+    3  "events.md documents every event" — it documents the one shipped event
+       fully, and the 13 deferred with a named trigger each. Documenting a
+       schema for an event with no consumer would be inventing a contract.
+
+  The week's real finding is that ADR-002's gap was never 12 missing producers.
+  It is 12 missing consumers, plus one security constraint nobody had written
+  down. Discovering that on Day 1 rather than Day 4 is what the inventory was
+  for.
+
+  Two process notes worth carrying:
+    - Stacked PRs get no CI. ci.yaml triggers on pull_request branches [main]
+      only, so a PR targeting another branch runs nothing. Every W9 branch
+      targeted main directly to work around it. Worth fixing if stacking
+      continues.
+    - A compose edit shipped a duplicate key that yaml.safe_load accepted and
+      Compose rejected. Validate with the parser that matters.
+---
+```
+
 ---
 
 ## What's next
@@ -411,6 +494,13 @@ Post-V0.5 items tracked in `v0.5-close.md`:
 - Cold-start + fresh-clone timing on a second engineer's laptop.
 - ~~Optional: Playwright automated recording of the operator flow.~~ Landed W8 Day 4 — `infrastructure/scripts/record_demo.py`.
 - V1 hardening path: real KYC vendor, WhatsApp, reconciliation cron, multi-draw browsing, refund UX. ~~Encrypted server_seed at rest~~ closed W8 Day 1; the outbox is ~~scaffolded~~ but only the reveal producer is migrated — payment, ticket and wallet producers plus the CI grep gate are W9+ (ADR-002 §W8 execution amendment).
-- W9 candidate: sweep the suite for the flaky-test pattern found three times in W8 — a "make it different" step that can silently produce something identical.
+- ~~W9 candidate: sweep the suite for the flaky-test pattern found three times in W8.~~ Done W9 Day 4 — no new instances of that class. A **second** class surfaced instead: a test assuming it is the only consumer of shared state (`make test` racing the worker container, 20% failure). Both are worth watching for.
+- W10 candidates, in the order they block things:
+  - **Outbox consumers.** 13 producers are classified and deferred purely because nothing listens. Each consumer built unlocks its producer; `backend/tools/check_outbox_invariant.py` names the trigger for each.
+  - **ADR-006 decrypt split** — owed from ⚖️ Adaeze since W8. The one genuinely security-relevant gap: encryption at rest protects a stolen dump, not a compromised API process.
+  - **Identity remainder** — MFA and self-exclusion can proceed; the KYC adapter is gated on ADR-007 vendor selection, which has not landed.
+  - **Stacked-PR CI.** `ci.yaml` triggers on `branches: [main]` only, so a stacked PR runs no checks at all.
+  - **Seven dead admin sidebar links** — a 📋 John / 🎨 Sally product call, visible in `docs/VISUAL-WALKTHROUGH.md`.
+  - **Pin the dev-tool floors** — unpinned `ruff`/`mypy` drift produced two W8 findings.
 
 Every new session appends here per the AINE-AGENTS.md §7 discipline.

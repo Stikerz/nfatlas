@@ -281,12 +281,29 @@ nobody dares touch.
   recurse.
 - `atlas.idempotency` — infrastructure, no domain state.
 
-### Status
+### Status — W9 close (2026-08-26)
 
-- 28 state-change sites, 1 with a producer, **13 to migrate**, 14 correctly without one.
-- **Pending 🏗️ Winston's review** before any migration, per `week-9-build-plan.md
-  §5`. He owns this file (`AINE-AGENTS.md §4`) and the event names.
-- The CI gate (Day 3) will encode the "must not emit" table as its allowlist.
+- 28 state-change sites: **1 emits**, **13 deferred with a named trigger**,
+  **14 correctly without a producer**.
+- 🏗️ Winston's review landed W9 Day 1 and is recorded above as the naming and
+  emission rules.
+- **The invariant is enforced.** `backend/tools/check_outbox_invariant.py` runs
+  in the `module-boundaries` CI job. It is AST-based, not grep: the question
+  "does the function containing this `audit.append` also emit?" is about scope,
+  not text.
+- The allowlist in that checker is the machine-readable form of the two tables
+  below — 28 entries, a reason each.
+
+**What W9 did not do, and why.** No producer was migrated. Of the 13 classified
+must-emit, 11 have no consumer and would dead-letter on the first attempt, and
+`otp.issued` cannot carry its payload safely (rule 4). Migrating them is W10+
+work, gated on consumers existing rather than on effort. Founder decision
+`week-9-build-plan.md §0 ask 2` chose exactly this: gate live with an honest
+allowlist, migration continues.
+
+The value delivered is that the debt stops growing — a new state change now
+fails CI until someone classifies it — and that the remainder is visible in one
+place instead of invisible across seven modules.
 
 ---
 
