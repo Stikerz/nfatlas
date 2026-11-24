@@ -1,23 +1,23 @@
-"""Week 5 exit-gate E2E — the flagship consumer + operator flows end-to-end.
+"""Week 5 exit-gate E2E — the flagship consumer flow end-to-end.
 
-Walks the demo-plan §2 flagship flow steps 1-5, 10:
+Walks the demo-plan §2 flagship flow steps 1-5:
 
   Consumer:
     1. register + OTP + password + login
     2. browse the active draw (GET /draws + /draws/{id})
-    (3. free-entry disclosure — UI concern, out of scope for backend E2E)
     4. buy paid ticket: skill question → answer correctly → purchase →
        signed webhook → ticket appears
     5. view ticket (GET /tickets/me)
 
-  Operator:
-    10. transcribe free-entry slip → subject user's ticket list shows it
+Step 3 (free-entry disclosure) was a UI concern and never in backend
+scope; step 10 (operator transcribes a free-entry slip) was dropped
+2026-11-23 when the free-entry route was unwired.
 
 Then the assertions the plan §8 exit gate mentions:
   - wallet balance stays at 0 across a paid-ticket purchase (direct-to-
     Paystack; user_wallet is for winnings only in V0.5)
   - full audit chain intact from register → deposit-side revenue post →
-    ticket issued → free ticket issued, with prev_hash linkage
+    ticket issued, with prev_hash linkage
 """
 
 from __future__ import annotations
@@ -253,38 +253,14 @@ async def test_flagship_flow_end_to_end(
     )
     assert wallet_after.json()["balance_minor"] == 0
 
-    # ── step 10: operator transcribes a free entry ──────────────────────
-    _, _, admin_token = await _register_login(
-        client, _stub_mailhog, db_session=db_session, make_admin=True
-    )
-    subject_id, _, subject_token = await _register_login(client, _stub_mailhog)
-    free_resp = await client.post(
-        "/api/v1/tickets/free",
-        json={
-            "draw_id": str(draw.id),
-            "subject_user_id": str(subject_id),
-            "slip_reference": "FE-E2E-2026-07",
-        },
-        headers={"Authorization": f"Bearer {admin_token}", "Idempotency-Key": str(uuid.uuid4())},
-    )
-    assert free_resp.status_code == 201, free_resp.text
-    assert free_resp.json()["ticket_number"] == 2
-
-    subject_tickets = await client.get(
-        "/api/v1/tickets/me",
-        headers={"Authorization": f"Bearer {subject_token}"},
-    )
-    assert len(subject_tickets.json()["items"]) == 1
-    assert subject_tickets.json()["items"][0]["entry_source"] == "free"
-
     # ── audit chain: every event present + linked prev→row hashes ───────
     rows = (
         await db_session.execute(select(AuditLog).order_by(AuditLog.seq))
     ).scalars().all()
     events = [r.event_name for r in rows]
 
-    # Not asserting exact order (three registrations + one operator grant
-    # + three flows produce a lot of events); asserting presence + chain.
+    # Not asserting exact order (registration + purchase flows produce a
+    # lot of events); asserting presence + chain.
     for expected in (
         "user.registered",
         "otp.issued",
@@ -299,7 +275,6 @@ async def test_flagship_flow_end_to_end(
         "ticket.paid_purchase_completed",
         "wallet.payment_fee_posted",
         "payment.confirmed",
-        "ticket.free_transcribed",
     ):
         assert expected in events, f"missing event {expected} — got {events}"
 

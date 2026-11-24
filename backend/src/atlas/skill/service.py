@@ -37,6 +37,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from atlas.audit_log import writer as audit
 from atlas.config import get_settings
 from atlas.draw import service as draw_service
+from atlas.identity import self_exclusion
 from atlas.skill.models import (
     SkillQuestion,
     SkillQuestionAttempt,
@@ -62,6 +63,10 @@ class QuestionForClient(NamedTuple):
     prompt: str
     options: list[tuple[uuid.UUID, str]]  # (option_id, option_text)
     expires_at: datetime
+
+
+class SelfExcludedError(RuntimeError):
+    """The caller is self-excluded (ADR-010); no entry flow may start."""
 
 
 class DrawNotOpenForSkillError(RuntimeError):
@@ -113,7 +118,15 @@ async def next_question(
     draw_id: uuid.UUID,
 ) -> QuestionForClient:
     """Issue a new attempt for user + draw. Same user / same minute →
-    same question (see module docstring)."""
+    same question (see module docstring).
+
+    ADR-010: an excluded user is refused here so the entry flow cannot be
+    started at all, rather than failing at purchase after they have picked
+    an answer. The binding check is in `ticket.service.issue_paid`.
+    """
+    if await self_exclusion.is_excluded(session, user_id=user_id):
+        raise SelfExcludedError(str(user_id))
+
     if not await draw_service.is_sales_open(session, draw_id=draw_id):
         raise DrawNotOpenForSkillError(str(draw_id))
 

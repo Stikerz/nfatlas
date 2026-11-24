@@ -39,7 +39,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Draws', href: '/admin/draws' },
       { label: 'Tickets', href: '/admin/tickets' },
-      { label: 'Free entries', href: '/admin/free-entries' },
       { label: 'Claims', href: '/admin/claims' },
     ],
   },
@@ -47,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'REVIEW',
     items: [
       { label: 'Audit log', href: '/admin/audit-log' },
+      { label: 'Self-exclusions', href: '/admin/self-exclusions' },
       { label: 'Users', href: '/admin/users' },
       { label: 'Compliance', href: '/admin/compliance' },
     ],

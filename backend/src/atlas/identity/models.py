@@ -114,3 +114,37 @@ class Session(Base):
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ip_addr: Mapped[str | None] = mapped_column(INET, nullable=True)
     user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class SelfExclusion(Base):
+    """ADR-010 registry. Sole writer: `atlas.identity.self_exclusion`.
+
+    Keyed on `user_id`, not `bvn_hash` as the base ADR specified — see the
+    ADR-010 amendment of 2026-11-24. `bvn_hash` is nullable until ADR-007
+    (KYC) lands and Phase B can backfill it.
+
+    There is deliberately no `revoked_at`: V1 exclusion is permanent, and
+    the absence of a reversal column is the enforcement.
+    """
+
+    __tablename__ = "self_exclusions"
+    __table_args__ = (
+        CheckConstraint(
+            "excluded_by IN ('user_self', 'operator', 'regulator')",
+            name="ck_self_exclusions_excluded_by_enum",
+        ),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), primary_key=True
+    )
+    bvn_hash: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
+    excluded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
+    excluded_by: Mapped[str] = mapped_column(String, nullable=False)
+    excluded_by_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
+    )
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    notes: Mapped[str | None] = mapped_column(String, nullable=True)

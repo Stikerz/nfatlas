@@ -47,6 +47,17 @@ async def next_question(
         result = await skill_service.next_question(
             db, user_id=session.user_id, draw_id=draw_id
         )
+    except skill_service.SelfExcludedError as exc:
+        # 403: the account is closed under ADR-010. Deliberately explicit —
+        # this user asked to be stopped, so a vague error would be unkind
+        # and would look like a bug.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "self_excluded",
+                "message": "This account has been closed and cannot enter draws.",
+            },
+        ) from exc
     except skill_service.DrawNotOpenForSkillError as exc:
         # 409: the draw exists (or not) but is not accepting entries.
         # This is a state error, not a not-found — a Week 6 closed draw

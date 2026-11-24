@@ -48,6 +48,7 @@ _TRUNCATE_TABLES = (
     "outbox",
     "outbox_dead_letter",
     "draw_winners",
+    "self_exclusions",
     "free_entry_slips",
     "tickets",
     "skill_question_attempts",

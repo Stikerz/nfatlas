@@ -82,3 +82,44 @@ class SessionCurrentResponse(BaseModel):
     expires_at: datetime
     roles: list[str] = Field(default_factory=list)
     is_admin: bool = False
+
+
+class SelfExcludeRequest(BaseModel):
+    """ADR-010 §User-facing flow requires a typed confirmation plus an MFA
+    challenge. `confirmation` must be the literal string EXCLUDE; `otp_code`
+    is a `login_mfa` OTP the client requested immediately beforehand."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    confirmation: Literal["EXCLUDE"]
+    otp_code: str = Field(min_length=4, max_length=10)
+
+
+class SelfExcludeResponse(BaseModel):
+    """Deliberately states the Phase A limit back to the client so no
+    surface can imply cross-account enforcement that does not exist.
+    See the ADR-010 amendment of 2026-11-24."""
+
+    user_id: uuid.UUID
+    excluded_at: datetime
+    sessions_revoked: int
+    reversible: bool = False
+    cross_account_enforced: bool = False
+
+
+class SelfExclusionSummary(BaseModel):
+    """Admin read-only view. Deliberately carries no action affordance —
+    V1 has no reversal (ADR-010), so there is nothing an operator can do
+    to a row beyond read it."""
+
+    user_id: uuid.UUID
+    email: str
+    excluded_at: datetime
+    excluded_by: str
+    excluded_by_id: uuid.UUID | None
+    reason: str | None
+    bvn_enforced: bool = False
+
+
+class SelfExclusionList(BaseModel):
+    items: list[SelfExclusionSummary]

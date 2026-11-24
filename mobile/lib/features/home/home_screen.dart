@@ -7,6 +7,7 @@ import '../../design/tokens/colours.dart';
 import '../../design/tokens/spacing.dart';
 import '../../design/tokens/typography.dart';
 import '../draws/draws_api.dart';
+import '../account/self_exclusion_screen.dart';
 import '../identity/identity_controller.dart';
 import '../identity/register_screen.dart';
 import '../skill/skill_question_screen.dart';
@@ -202,11 +203,12 @@ class _TicketsPanel extends ConsumerWidget {
   }
 }
 
-class _AccountPanel extends StatelessWidget {
+class _AccountPanel extends ConsumerWidget {
   const _AccountPanel();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final userId = ref.watch(identityControllerProvider).userId;
     return Padding(
       padding: const EdgeInsets.all(AtlasSpace.s600),
       child: Column(
@@ -242,8 +244,29 @@ class _AccountPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AtlasSpace.s400),
+          // ADR-010 Phase A. Deliberately a plain, unstyled text button at
+          // the bottom of the panel: a closure control should be findable
+          // without being promoted. No confirmation happens here — the
+          // screen states the limits first, then asks for a typed
+          // confirmation and an OTP.
+          if (userId != null)
+            TextButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (_) => SelfExclusionScreen(userId: userId),
+                ),
+              ),
+              child: Text(
+                'Close my account',
+                style: AtlasType.bodySmall.copyWith(
+                  color: AtlasColors.textSecondary,
+                  decoration: TextDecoration.underline,
+                ),
+              ),
+            ),
+          const SizedBox(height: AtlasSpace.s200),
           Text(
-            'Self-exclusion + profile settings land in V1.',
+            'Profile settings land in V1.',
             textAlign: TextAlign.center,
             style: AtlasType.bodySmall.copyWith(
               color: AtlasColors.textSecondary,

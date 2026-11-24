@@ -90,8 +90,12 @@ ALLOWLIST: dict[str, str] = {
     "wallet.deposit_credited": "DEFERRED — emit when a balance-change consumer exists",
     "wallet.prize_awarded": "DEFERRED — emit when a payout-notification consumer exists",
     "wallet.refund_issued": "DEFERRED — emit when a refund-confirmation consumer exists",
+    "self_exclusion.activated": "DEFERRED — emit when a confirmation-email consumer exists (ADR-010 Phase A)",
     "ticket.issued": "DEFERRED — emit when a ticket-confirmation consumer exists",
-    "ticket.free_transcribed": "DEFERRED — emit when a free-route confirmation consumer exists",
+    # Retained for the historical audit chain: the free route was unwired
+    # 2026-11-23, so nothing emits this today. Restoring the route restores
+    # the producer and this entry becomes live again.
+    "ticket.free_transcribed": "UNWIRED 2026-11-23 — no live producer",
     "draw.committed": "DEFERRED — emit when a public-announcement consumer exists",
     "draw.entries_snapshot": "DEFERRED — emit when a sales-closed consumer exists",
     "draw.revealed": "DEFERRED — emit when a public-surface consumer exists",

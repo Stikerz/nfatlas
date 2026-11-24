@@ -13,24 +13,28 @@ atlas.skill.service.verify_answer on a correct answer; consumption
 marks `consumed_at` on the attempt row so the entitlement is
 single-use even under retry.
 
-`issue_free` (Day 4) transcribes a free-entry slip and mints a ticket
-with `entry_source='free'`; same `_mint_ticket` underneath.
+The free-entry route (`issue_free`, W5 Day 4) was unwired on
+2026-11-23 — see the `atlas.ticket.models` docstring for why the
+`free_entry_slips` table and the `entry_source='free'` enum value are
+deliberately retained.
 """
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import UTC, datetime
 
 from sqlalchemy import func, select, text
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log import writer as audit
-from atlas.draw import service as draw_service
+from atlas.identity import self_exclusion
 from atlas.skill.models import SkillQuestionAttempt
-from atlas.ticket.models import FreeEntrySlip, Ticket
+from atlas.ticket.models import Ticket
+
+
+class SelfExcludedError(RuntimeError):
+    """The buyer is self-excluded (ADR-010). No ticket may be issued."""
 
 
 class EntitlementNotFoundError(LookupError):
@@ -44,14 +48,6 @@ class EntitlementForbiddenError(PermissionError):
 class EntitlementInvalidError(RuntimeError):
     """Entitlement is not-correct / expired / already-consumed / for a
     different draw. One error class — the audit-log payload disambiguates."""
-
-
-class DuplicateSlipError(RuntimeError):
-    """The same slip_reference has been transcribed for this draw before."""
-
-
-class DrawNotOpenForFreeEntryError(RuntimeError):
-    """Free entries can only be transcribed against a sales_open draw."""
 
 
 async def _next_ticket_number(
@@ -88,7 +84,7 @@ async def _mint_ticket(
     external_ref: str | None,
     idempotency_key: str,
 ) -> Ticket:
-    """Sole INSERT path. Callers: issue_paid, issue_free.
+    """Sole INSERT path. Sole caller: issue_paid.
 
     Idempotency: `tickets.idempotency_key` UNIQUE. A replay with the
     same key returns the existing row without allocating a new number.
@@ -113,10 +109,13 @@ async def _mint_ticket(
     session.add(ticket)
     await session.flush()
 
+    # `issue_paid` is the only live caller since the free route was
+    # unwired, so the actor is always the webhook. Restoring `issue_free`
+    # restores the operator branch alongside it.
     await audit.append(
         session,
-        actor_type="system" if entry_source == "paid" else "operator",
-        actor_id="payment.webhook" if entry_source == "paid" else "admin.free_entry",
+        actor_type="system",
+        actor_id="payment.webhook",
         event_name="ticket.issued",
         subject_type="ticket",
         subject_id=str(ticket.id),
@@ -141,7 +140,16 @@ async def issue_paid(
 ) -> Ticket:
     """Called from the webhook charge.success handler with
     metadata.purpose == 'ticket'. Consumes the entitlement, then mints
-    the ticket. Idempotent by payment_intent_id — replay is a no-op."""
+    the ticket. Idempotent by payment_intent_id — replay is a no-op.
+
+    ADR-010 amendment §Enforcement points: the exclusion check lives here,
+    not only on the purchase route. The webhook reaches this function
+    without passing through the route, and a user who excluded between
+    checkout and capture must not receive a ticket.
+    """
+    if await self_exclusion.is_excluded(session, user_id=user_id):
+        raise SelfExcludedError(str(user_id))
+
     await _validate_and_consume_entitlement(
         session,
         entitlement_id=entitlement_id,
@@ -245,73 +253,3 @@ async def list_for_user(
         )
     ).scalars().all()
     return list(rows)
-
-
-async def issue_free(
-    session: AsyncSession,
-    *,
-    actor_operator_id: uuid.UUID,
-    subject_user_id: uuid.UUID,
-    draw_id: uuid.UUID,
-    slip_reference: str,
-) -> Ticket:
-    """Admin-transcribed free-route entry per v0.5-demo-plan §2.10.
-
-    Records the slip (UNIQUE per draw) + mints a ticket with
-    entry_source='free'. Shared `_mint_ticket` underneath so free and
-    paid tickets share the monotonic ticket_number sequence — a Week 6
-    reveal reads across the whole ordered pool.
-
-    Adaeze §5 free-entry parity: the slip and the paid entry share the
-    same tickets table + the same allocator, so odds are identical per
-    entry by construction. Nothing here privileges one source over the
-    other.
-    """
-    if not await draw_service.is_sales_open(session, draw_id=draw_id):
-        raise DrawNotOpenForFreeEntryError(str(draw_id))
-
-    slip = FreeEntrySlip(
-        draw_id=draw_id,
-        slip_reference=slip_reference,
-        actor_operator_id=actor_operator_id,
-        subject_user_id=subject_user_id,
-    )
-    session.add(slip)
-    try:
-        await session.flush()
-    except IntegrityError as exc:
-        # UNIQUE (draw_id, slip_reference) — see migration 0008.
-        await session.rollback()
-        raise DuplicateSlipError(slip_reference) from exc
-
-    ticket = await _mint_ticket(
-        session,
-        draw_id=draw_id,
-        user_id=subject_user_id,
-        entry_source="free",
-        external_ref=slip_reference,
-        # Slip is unique-per-draw, so this key is naturally unique too.
-        idempotency_key=f"ticket:free:{draw_id}:{slip_reference}",
-    )
-
-    # Adaeze audit-payload redaction (§5 draft recommendation): hash the
-    # slip_reference so the log carries a tamper-detectable identifier
-    # without persisting the raw slip content on the audit log surface.
-    slip_hash = hashlib.sha256(slip_reference.encode("utf-8")).hexdigest()
-    await audit.append(
-        session,
-        actor_type="operator",
-        actor_id=str(actor_operator_id),
-        event_name="ticket.free_transcribed",
-        subject_type="ticket",
-        subject_id=str(ticket.id),
-        payload={
-            "actor_operator_id": str(actor_operator_id),
-            "subject_user_id": str(subject_user_id),
-            "draw_id": str(draw_id),
-            "ticket_id": str(ticket.id),
-            "ticket_number": ticket.ticket_number,
-            "slip_reference_hash": slip_hash,
-        },
-    )
-    return ticket

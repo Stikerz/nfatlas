@@ -2,7 +2,7 @@
  * Trust-story page — how Atlas works as a prize competition.
  *
  * Static, no auth, no DB. Copy per v0.5-demo-plan.md §2.15. Language
- * follows the prize-competition + free-entry-route framing per Adaeze
+ * follows the prize-competition framing per Adaeze
  * §5 guidance — the word "lottery" appears nowhere.
  */
 
@@ -11,7 +11,7 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'How Atlas works · Provably fair prize competitions',
   description:
-    'Atlas runs prize competitions with a free entry route and a skill question. The winner is chosen by a commit-reveal protocol you can verify yourself.',
+    'Atlas runs prize competitions with a skill question on every entry. The winner is chosen by a commit-reveal protocol you can verify yourself.',
 };
 
 export default function HowItWorksPage() {
@@ -29,10 +29,9 @@ export default function HowItWorksPage() {
         <p>
           Atlas runs <strong>prize competitions</strong>. Each competition has
           a prize (cash, an apartment, a car), a ticket price, and a fixed
-          close time. To enter, you either buy a ticket after answering a
-          <strong> skill question</strong>, or send us a signed slip through
-          the <strong>free entry route</strong>. Both routes go into the same
-          ticket pool with the same odds per entry.
+          close time. To enter, you buy a ticket after answering a{' '}
+          <strong>skill question</strong>. Every ticket carries the same odds
+          per entry.
         </p>
       </section>
 
@@ -41,22 +40,9 @@ export default function HowItWorksPage() {
         <p>
           Before you can buy a paid ticket, you answer one multiple-choice
           question rotated from a curated pool. A wrong answer serves you a
-          new question — no penalty, no lockout. The skill test is the legal
-          basis for the competition status, and we take it seriously: the
-          pool grows over time and rotates deterministically per user per
-          minute so nobody can farm easy questions.
-        </p>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="mb-3 text-xl font-semibold">The free entry route</h2>
-        <p>
-          Under Nigerian and UK prize-competition norms, a free way to enter
-          must exist. Ours: mail a written entry slip to the address on the
-          draw page. Our operator transcribes the slip and it enters the
-          same ticket pool, with the same odds per entry, as any paid ticket.
-          Free entries are indistinguishable from paid ones by the winner-
-          selection algorithm.
+          new question — no penalty, no lockout. The pool grows over time and
+          rotates deterministically per user per minute so nobody can farm
+          easy questions.
         </p>
       </section>
 
