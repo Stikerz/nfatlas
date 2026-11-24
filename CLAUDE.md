@@ -39,8 +39,8 @@ Loaded into every Claude Code (and compatible AI-assistant) session on this repo
 
 ## Local-env caveats
 
-- **Zscaler / corporate-proxy SSL failures inside docker builds are a single-laptop issue, not a project defect.** CI (GitHub Actions) and prod deploy paths sit outside Zscaler. Do not commit Dockerfile changes, `.gitignore` entries, or Makefile targets purely to work around this on the founder's laptop.
-- Local workaround (founder's laptop only): run backend natively from `backend/.venv` (which trusts the corp CA via `SSL_CERT_FILE`), boot `postgres`, `redis`, `mailhog` via docker. The Bash-tool allowlist for the native-run pattern lives in each developer's own `.claude/settings.local.json` (gitignored); a second developer on a proxy-free network won't need it at all.
+- **`make test` can report a false green — rebuild first.** The `backend` service bakes source into the image at build time and mounts no source volume (`docker-compose.yaml` mounts only `./infrastructure`). `make test` runs `docker compose run backend pytest` without building, so an image older than your working tree silently tests *stale code*. This bit a session on 2026-11-23: a deleted route still passed. Run `docker compose build backend worker` before `make test`, or run natively from `backend/.venv` against the `atlas_test` database.
+- ~~Zscaler / corporate-proxy SSL failures inside docker builds~~ — resolved 2026-11-23, confirmed by a clean `docker compose build backend worker`. Docker builds work locally again; the native-run workaround is no longer required (still fine as a faster inner loop).
 
 ## Fresh-laptop setup (concurrent work)
 

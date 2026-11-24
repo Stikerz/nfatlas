@@ -22,7 +22,7 @@
 
 ## Impact
 
-- **Users:** cannot buy paid tickets during the outage. Free-entry postal route remains available (per prize-competition mechanics) but is not a real-time UX substitute.
+- **Users:** cannot enter at all during the outage. (Before 2026-11-23 this line read that the free-entry postal route remained available. That route was unwired on 2026-11-23, and per REVIEW-001 §6.1 the P.O. box was never leased, so it was never a real fallback. There is now no non-paid entry path — do not tell users there is one.)
 - **Draws:** if a draw is in a live sales window, entries stop coming in until Paystack recovers. Purchase intents already submitted may end up in inconsistent states — some paid, some pending, some failed.
 - **Money at risk:** small in normal circumstances. But: (a) if a webhook backlog processes after recovery, at-least-once delivery per ADR-002 means some events fire twice — idempotency layer must catch this or R-FIN-02 (ledger mismatch) triggers; (b) if the outage crosses a draw's scheduled close, ambiguity about whether late-arriving payment intents count.
 - **Trust:** worst impact is user perception if handled with poor UX ("payment failed" with no explanation).

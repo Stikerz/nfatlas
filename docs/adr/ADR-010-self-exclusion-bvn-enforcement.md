@@ -76,3 +76,46 @@ CREATE TABLE self_exclusions (
 - BVN is never written to the application DB in plaintext. CI test against fixtures.
 - Self-exclusion lookup happens before every KYC vendor call. Enforced by adapter unit test.
 - The pepper is never logged, never appears in code, never appears in CI artefacts. CI secret-scanning enforces.
+
+---
+
+## Amendment (2026-11-24) — two-phase delivery; BVN enforcement is blocked on ADR-007
+
+**Proposed by:** 🏗️ Winston · **Requested by:** ⚖️ Adaeze (REVIEW-002 §6) · **Approver:** S1408661 (EL)
+**Status of base decision:** unchanged. BVN-keyed permanent exclusion remains the target. This amendment records that it cannot be reached yet, and what ships in the meantime.
+
+### Why
+
+ADR-010's primary enforcement point is "at KYC submission". **There is no KYC module** — ADR-007 was approved and never built, and BVN is collected nowhere in the system (the only trace is the unused `bvn_pepper` in `config.py`). Enforcement point 2 explicitly delegates the block to point 1, so it is equally unreachable.
+
+Meanwhile the consumer-facing responsible-play page asserted, until 2026-11-23, that a permanent BVN-keyed regime was live. It was not. The honest options were to build the registry or correct the copy; the copy was corrected, and this amendment commits to building what is buildable now.
+
+### Amended decision
+
+**Phase A — account-level exclusion. Buildable now; no BVN, no KYC dependency.**
+
+1. **Registry key.** `self_exclusions` is keyed on `user_id` (PRIMARY KEY), with `bvn_hash` present as a **nullable UNIQUE** column from the first migration. The base decision's `bvn_hash TEXT PRIMARY KEY` is superseded. Phase B backfills the column; no second migration of a live table.
+2. **Enforcement points amended.** The base decision named KYC submission, account creation and login. Added:
+   - **Ticket purchase.** `ticket.service.issue_paid` refuses an excluded user. *This closes a defect in the base ADR, not merely in the code: purchase was never listed as an enforcement point, so a closed user holding a live session could buy a ticket.* Enforced at the service layer because the webhook reaches `issue_paid` without passing the route.
+   - **Skill-question issue.** `skill.service.next_question` refuses an excluded user, so a doomed flow cannot be started.
+   - **Login** is retained and is satisfied by existing code (`session_service` already refuses a user whose `status != 'active'`).
+   - **Account creation** is retained as specified — registration is still permitted and still reveals nothing — but note it now provides **no** protection until Phase B, since the block it defers to does not exist.
+3. **Wallet refund deferred.** The base decision requires the balance be refunded to the originating payment method, with escheatment where refund is impossible. **Neither capability exists:** there is no Paystack refund call (`payment/service.py` says so explicitly), and `docs/compliance/escheatment-policy.md` was never drafted. Phase A **holds** the balance on the closed account and surfaces it to support. Doing nothing while this ADR claims a refund occurs is precisely the defect this amendment exists to correct.
+
+**Phase B — BVN-keyed cross-account enforcement. BLOCKED on ADR-007.**
+
+Unchanged from the base decision. On delivery of KYC: hash with the existing pepper, backfill `bvn_hash`, add the pre-vendor lookup and the `self_exclusion.match` audit event.
+
+### Invariants added
+
+- A user with a `self_exclusions` row cannot obtain a ticket by **any** path. Asserted at the service layer, not only through HTTP.
+- `self_exclusions` has exactly one writer: `atlas.identity.self_exclusion`.
+- No un-exclude path exists in code or admin UI. V1 exclusion is permanent; absence of the capability is the enforcement.
+
+### Consequence that must govern consumer copy
+
+Phase A stops a user who asks to stop. **It does not prevent that user registering again with a different email and phone.** Copy may say the account can be permanently closed. Copy may **not** say a fresh account cannot bypass it until Phase B ships. The withdrawn sentence is recorded in REVIEW-002 §6.1.
+
+### Base-decision invariants carried forward unchanged
+
+BVN never stored in plaintext; exclusion lookup precedes every KYC vendor call; **the pepper is never rotated** — rotation invalidates the registry.

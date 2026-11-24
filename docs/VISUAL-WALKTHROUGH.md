@@ -20,13 +20,15 @@ diff in the pull request that caused it.
 
 ## 1 · The promise, before anyone has entered
 
-The public surface exists to be checked by someone who does not trust you. It states the free-entry route and the skill question up front rather than burying them.
+The public surface exists to be checked by someone who does not trust you. It states the skill question and the commit-reveal proof up front rather than burying them.
+
+> **Screenshots predate 2026-11-23.** They show the free-entry route sections, which have since been removed from `/how-it-works`, and the pre-correction responsible-play copy (see REVIEW-002 §6). Re-capture before this document is shown to anyone external.
 
 ### How it works
 
 `public`
 
-The commit-reveal protocol in plain language. Atlas is a prize competition, not a lottery — every draw carries a free entry route with identical odds, and that claim is made here.
+The commit-reveal protocol in plain language. The page positions Atlas as a prize competition and explains the skill question. The free-entry-route section shown in this screenshot was removed on 2026-11-23.
 
 ![How it works](screens/01-how-it-works.png)
 

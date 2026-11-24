@@ -184,7 +184,9 @@ never regenerates. Verify with
 
 ## Legal model
 
-Atlas operates as a **prize competition**, not a lottery. Every draw offers a free entry route with identical odds and requires a skill question on every paid entry. Marketing copy bans "lottery," "raffle," "luck." See PRD §1 and [`_bmad-output/planning-artifacts/legal/counsel-engagement-brief.md`](_bmad-output/planning-artifacts/legal/counsel-engagement-brief.md) for the legal opinion currently being commissioned to confirm the model under Nigerian law.
+Atlas positions itself as a **prize competition**, not a lottery, and requires a skill question on every paid entry. Marketing copy bans "lottery," "raffle," "luck."
+
+> **Under review — do not treat the model as settled.** The free entry route was unwired on 2026-11-23 by founder decision. Separately, desk research on 2026-11-23 found that the National Lottery Act 2005 was nullified by the Supreme Court in November 2024 and that the operative law is State law, which on the research's reading contains no skill or free-entry carve-out. PRD §1 and the counsel brief both predate these changes and are being revised. See [`_bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md`](_bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md). Nigerian gaming counsel has not yet been engaged; no code may touch a real payment rail before that sign-off (PRD §1).
 
 ---
 
