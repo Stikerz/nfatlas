@@ -118,3 +118,112 @@ John to confirm; my assessment:
 3. On approval — apply to the PRD, open the follow-ups in §3, and record in `docs/AI-INTEGRATION-LOG.md` with reviewer and approver per §12 step 4.
 
 — ⚖️ Adaeze
+
+---
+
+# Owner review — 📋 John (PRD owner), 2026-11-26
+
+Per `delivery-framework.md §12` step 2.
+
+## Verdict: APPROVED WITH REQUIRED ADDITIONS — not yet applicable
+
+The §1 and §3.1 wording in §2 of this proposal is right and I would land it as drafted. But **the proposal is incomplete.** It amends two sections of a document that is wrong in five places, and applying it as-is would leave the PRD internally inconsistent — §1 saying one mechanic, §2 still promising users a free entry route, §3.2 still promising a protection that does not exist.
+
+An amendment that half-corrects a specification is worse than one that has not been written, because it looks done. §6 below supplies the missing sections. With those, I approve.
+
+I also have a product question that sits outside the amendment process entirely — §7.
+
+## 1. What the proposal gets right
+
+- Striking through rather than deleting. The PRD should record that a free entry route was specified and why it went, not pretend it never existed. Future readers need the decision, not a clean document.
+- §1's new sentence that the legal caveat **governs** the product decision rather than footnoting it. That inversion is correct and overdue.
+- Recording the §12 breach in §0 instead of quietly retro-fitting. Noted, accepted, and I expect the next one to go spec-first.
+- Correcting `entry_source` from `postal_free` to `free`. That drift has been live since W5 and nobody caught it because nobody reads a spec against a schema.
+
+## 2. Required addition — §3.2 is untouched and is now false
+
+This is the significant omission.
+
+PRD §3.2 currently reads:
+
+> Self-exclusion: a user can self-exclude permanently from settings. **Re-registration with the same BVN is blocked.**
+
+ADR-010's Context section cites **§3.2 as the requirement it exists to satisfy**. Its 2026-11-24 amendment then split delivery into two phases and blocked Phase B on ADR-007. So §3.2's first sentence is now true (Phase A shipped, including the settings entry point); **its second sentence is not deliverable and has no date.**
+
+AMEND-001 does not mention §3.2. It amends the section describing a feature that was *removed* while leaving untouched the section describing a protection that was *never built* — the defect that produced REVIEW-002 §6 in the first place.
+
+## 3. Required addition — §2 still sells the free route to users
+
+§2 "What V1 is" lists, as a thing V1 does for a user:
+
+> - Enter for free via a documented free-entry route (see §3).
+
+That is a user-facing scope commitment, not a mechanic detail. It belongs in this amendment, and the proposal's cascade table lists §2 without proposing wording for it.
+
+The same bullet list also has an operator line: *"Configure and schedule a draw (prize, ticket price, **max entries**, close date, draw date, skill question)."* `entries_cap` was found unenforced, and the founder decided against caps. Another stale commitment.
+
+## 4. Required addition — §10 contains an exit criterion that can never be met
+
+Phase 0 exit criteria include:
+
+> - Free-entry route operationalised: P.O. box leased, entry slip designed, transcription workflow documented.
+
+Phase 0 cannot close against a criterion for a feature that no longer exists. This is a delivery blocker sitting inside a checklist where nobody will look until someone tries to declare Phase 0 done.
+
+## 5. Disagreement — market scope is a PRD question
+
+The proposal's cascade table lists market sizing and says *"not a PRD section, but it invalidates any forecast built on 'Nigeria only'."*
+
+I do not accept that framing. **"Nigeria only" is a PRD scope statement** — §2 says it, §3 is written against it, and §7's V2 expansion plan depends on it. R-REG-02 now says per-State licensing may reduce V1's addressable market to Lagos. If that is right, V1's scope line is wrong, and scope lines are mine.
+
+I am not proposing wording yet, because it turns on counsel Q7.2 (which State's law governs an online operator serving users nationwide). But it is a **tracked, open PRD amendment**, not a business-plan footnote. Recording it as AMEND-002-pending.
+
+## 6. Proposed additional changes — required before this is applied
+
+### 6.1 §2, consumer bullet list
+
+> - ~~Enter for free via a documented free-entry route (see §3).~~ **Struck 2026-11-23** — the free entry route was removed. It was never operable (R-FREE-01).
+
+### 6.2 §2, operator bullet list
+
+> - Configure and schedule a draw (prize, ticket price, ~~max entries,~~ close date, draw date, skill question). **`entries_cap` struck 2026-11-23** — the field existed but was never enforced, and the founder decided V1 operates with no per-draw entry cap.
+
+### 6.3 §3.2 Identity — self-exclusion
+
+> - **Self-exclusion (Phase A, shipped 2026-11-24):** a user can permanently close their account from settings. Closure is enforced at login, at ticket purchase and at skill-question issue, and every session is revoked. **There is no reversal.**
+> - **Self-exclusion (Phase B, NOT DELIVERED):** blocking re-registration by the same person requires BVN matching and is **blocked on ADR-007 (KYC), which is unbuilt.** Until Phase B ships, a closed account does not prevent the same person opening a new one with a different email and phone. **Consumer copy must not claim otherwise** — see REVIEW-002 §6.1 for the withdrawn wording.
+
+*Rationale: the old single line conflated a shipped capability with an unbuilt one. Splitting them is what stops the copy defect recurring, because the spec now states the boundary that the test `test_phase_a_does_not_block_reregistration` enforces.*
+
+### 6.4 §10 Phase 0 exit criteria
+
+> - ~~Free-entry route operationalised: P.O. box leased, entry slip designed, transcription workflow documented.~~ **Struck 2026-11-23.** Never completed — no P.O. box was ever leased (R-FREE-01) — and no longer applicable.
+> - **Added:** Nigerian gaming counsel engaged and Q7/Q1 answered. **This replaces the free-route criterion as the Phase 0 legal gate** and is the harder of the two.
+
+## 7. The question this amendment cannot answer
+
+PRD §1 is titled "The product decision". Its stated rationale was that two mechanics let UK operators sit outside gambling regulation, and Atlas would use both.
+
+One has been removed. The other, on the 2026-11-23 research, is legally inert in Nigeria — there is no skill carve-out to qualify for. The free route, had it been built, would have been inert too: the governing definition needs only chance and a prize.
+
+So the product decision in §1 now rests on **nothing that survives contact with the governing law.** This amendment faithfully records what changed. It does not ask whether the decision still holds — and that is the question in front of the founder, not a documentation task:
+
+1. **Licensed operator.** If a Lagos licence is obtainable at ~₦250–400m in year one (unverified, counsel Q7.3), that is a funding round before a single entry is sold. It is a viable business. It is not the business in this PRD, and the unit economics in §5 do not survive it.
+2. **Proportionate permit**, if one exists (counsel Q7.4). The research calls this the highest-leverage unknown in the engagement, and I agree — it is the difference between a startup and a licensed gaming operator.
+3. **Different launch market.** Ghana, Kenya, SA. **No regulatory research exists for any of them.** Nigeria was also assumed benign for five months.
+
+**My recommendation:** do not apply AMEND-001 or build further product against this PRD until counsel answers Q7 and Q1. Amending §1 to describe one surviving mechanic is accurate bookkeeping, but the PRD's entire premise is pending a verdict that has not been requested yet, from a firm that has not been engaged.
+
+The smallest thing that validates the assumption here is not a feature. It is an email to a Lagos gaming firm.
+
+## 8. Decision
+
+**Approved subject to §6 being incorporated.** With §6.1–§6.4 added, I approve AMEND-001 as PRD owner and it passes to the founder as EL approver per §12 step 2.
+
+**Not yet applied.** The PRD remains unchanged on disk.
+
+Opened as follow-ups:
+- **AMEND-002-pending** — V1 market scope, gated on counsel Q7.2 (§5).
+- **§7 product decision review** — founder-level, gated on counsel Q1/Q7. Not an amendment.
+
+— 📋 John

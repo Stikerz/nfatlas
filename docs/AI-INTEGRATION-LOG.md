@@ -985,6 +985,77 @@ notes: |
 ---
 
 
+### 2026-11-26 — AMEND-001 owner review (John): approved with required additions
+
+```yaml
+---
+ts: 2026-11-26T13:00:00Z
+agent: bmad-agent-pm (John)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/amendments/AMEND-001-prd-free-entry-route-removal.md
+operation: reviewed
+inputs:
+  - PRD.md §1, §2, §3.1, §3.2, §10
+  - docs/adr/ADR-010 (amendment 2026-11-24)
+  - docs/compliance/reviews/REVIEW-002 §6.1
+  - docs/risk-register.md R-REG-02
+  - _bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    §12 step 2 complete — PRD owner has reviewed. Passes to founder as EL
+    approver. PRD still UNCHANGED on disk; AMEND-001 is not applied.
+notes: |
+  VERDICT: approved subject to four additional sections being incorporated.
+  The proposal amended two sections of a document wrong in five places;
+  applying it as drafted would have left the PRD internally inconsistent —
+  §1 stating one mechanic while §2 still promised users a free entry route
+  and §3.2 still promised a protection that does not exist.
+
+  REQUIRED ADDITIONS, now drafted into AMEND-001 §6:
+  - §3.2 was untouched and is now false. It reads "a user can self-exclude
+    permanently from settings. Re-registration with the same BVN is
+    blocked." ADR-010 cites §3.2 as its source requirement; its amendment
+    split delivery, so sentence one is shipped and sentence two is blocked
+    on ADR-007 with no date. Rewritten as two explicit bullets — Phase A
+    shipped, Phase B NOT DELIVERED — so the spec states the boundary that
+    test_phase_a_does_not_block_reregistration enforces. This is the
+    omission that mattered: the proposal corrected a removed feature while
+    leaving a never-built protection described as real, which is the exact
+    defect that produced REVIEW-002 §6.
+  - §2 consumer bullet still sells "Enter for free via a documented
+    free-entry route" as V1 scope.
+  - §2 operator bullet still lists "max entries" in draw configuration;
+    entries_cap was never enforced and the founder decided against caps.
+  - §10 Phase 0 exit still requires "Free-entry route operationalised:
+    P.O. box leased" — a criterion that can never be met, sitting in a
+    checklist nobody reads until someone tries to close Phase 0. Replaced
+    with "Nigerian gaming counsel engaged and Q7/Q1 answered".
+
+  DISAGREEMENT RECORDED. The proposal treated market sizing as "not a PRD
+  section". Rejected: "Nigeria only" is a §2 scope statement, §3 is
+  written against it, and §7's V2 plan depends on it. R-REG-02 says
+  per-State licensing may reduce V1's market to Lagos. Tracked as
+  AMEND-002-pending, gated on counsel Q7.2.
+
+  PRODUCT QUESTION RAISED, OUTSIDE THE AMENDMENT PROCESS. PRD §1 is "The
+  product decision" and its rationale was that two mechanics kept Atlas
+  outside gambling regulation. One is removed; the other is legally inert
+  in Nigeria on current research; the removed one would have been inert
+  too. The decision now rests on nothing that survives the governing law.
+  John's recommendation: do not apply AMEND-001 or build further product
+  against this PRD until counsel answers Q7 and Q1 — amending §1 is
+  accurate bookkeeping, but the premise is pending a verdict from a firm
+  that has not been engaged. "The smallest thing that validates the
+  assumption here is not a feature. It is an email to a Lagos gaming firm."
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
