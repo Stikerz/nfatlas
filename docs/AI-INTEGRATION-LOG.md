@@ -908,6 +908,83 @@ notes: |
 ---
 
 
+### 2026-11-26 — Test review TR-001: P0 enforcement gap found and closed
+
+```yaml
+---
+ts: 2026-11-26T12:00:00Z
+agent: bmad-tea (Murat)
+session: claude-code
+artefact:
+  - _bmad-output/test-artifacts/test-reviews/TR-001-adr-010-phase-a.md
+  - backend/tests/identity/test_self_exclusion.py
+operation: reviewed + amended
+inputs:
+  - PR #15; docs/adr/ADR-010 (amendment 2026-11-24)
+  - docs/compliance/reviews/REVIEW-002 Addendum A.4, B
+  - TEA knowledge: test-quality, test-priorities-matrix, risk-governance
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    Gate: CONCERNS — approved for merge. Clears the Murat sign-off that
+    Adaeze's REVIEW-002 Addendum B approval was conditional on. EL
+    approval still outstanding.
+notes: |
+  P0 GAP FOUND AND CLOSED. Self-exclusion is regulatory compliance, so P0
+  on the priorities matrix. The service-layer check in issue_paid was
+  tested; the 403 pre-check on POST /tickets/purchase was NOT. Deleting
+  that block left all 291 tests green — an enforcement path with no
+  signal. Risk P2 x I3: an excluded user reaches a live checkout and a
+  payment intent is created against a closed account. Two tests added
+  (TestPurchaseRouteEnforcement), plus one for the same gap on
+  GET /draws/{id}/skill-questions/next.
+
+  MY OWN FIRST TEST WAS TOO WEAK, AND I REWROTE IT. The initial version
+  posted random draw/entitlement ids. It went red on mutation — but with
+  404, because it fell through to the draw lookup. A red for the wrong
+  reason would also fire on an unrelated routing change and never
+  demonstrates the property. Rewritten to issue an otherwise-VALID
+  purchase (real sales_open draw, real entitlement earned before
+  exclusion). Mutation now yields `assert 201 == 403` — without the guard,
+  an excluded user successfully buys a ticket. Also asserts no
+  payment_intents row is created. Principle: a test going red is not the
+  same as a test proving something; check what the red says.
+
+  COMMENDED: enforcement tested at the service layer because the payment
+  webhook reaches issue_paid without the route;
+  test_phase_a_does_not_block_reregistration asserting a LIMITATION built
+  to fail when Phase B lands (the mechanised copy-to-capability check
+  Adaeze asked for in Addendum A.4 — generalise it); absence-of-capability
+  tests for the missing un-exclude path; idempotency asserted by counting
+  side effects (0 sessions revoked, no second audit event) rather than
+  just not erroring.
+
+  DELETED COVERAGE AUDITED. test_free_entry.py's 8 tests went with the
+  route. No orphaned coverage — paid-ticket ticket_number monotonicity
+  survives in test_purchase_flow.py; the mixed paid/free numbering case
+  died with the feature, correctly.
+
+  OPEN, NON-BLOCKING: no E2E exclusion path (P1); no widget test for
+  SelfExclusionScreen, compliance-critical UI with zero coverage while
+  the pattern already exists in password_screen_test.dart (P1); test file
+  482 lines vs <300 DoD, split along the existing class seam.
+
+  PRE-EXISTING DEBT RECORDED, NOT THIS PR'S: _register_login
+  reimplemented across 10 test files (this change added the tenth);
+  phone generation uses `uuid4().int % 1_000_000` — random data that can
+  collide, the exact bug class behind W8's three flaky tests, held
+  harmless today only by function-scoped truncation; admin UI has 5 tests
+  in total.
+
+  VERIFICATION: 293/293 backend (291 -> 293) + 5/5 admin, green natively
+  and via `make test` on a rebuilt image. No flakes across repeated runs.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

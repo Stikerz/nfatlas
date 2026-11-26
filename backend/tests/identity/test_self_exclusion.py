@@ -16,9 +16,10 @@ the test fails loudly if Phase B ever lands without updating the copy.
 
 from __future__ import annotations
 
+import hashlib
 import uuid
 from collections.abc import Iterator
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from httpx import AsyncClient
@@ -27,9 +28,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
 from atlas.audit_log.models import AuditLog
+from atlas.draw import crypto as seed_crypto
+from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender, self_exclusion
 from atlas.identity.models import SelfExclusion, Session, User
+from atlas.payment.models import PaymentIntentRow
 from atlas.skill import service as skill_service
+from atlas.skill.models import SkillQuestion, SkillQuestionOption
 from atlas.ticket import service as ticket_service
 
 
@@ -87,6 +92,63 @@ async def _register_login(
         headers={"Idempotency-Key": str(uuid.uuid4())},
     )
     return user_id, email, login.json()["access_token"]
+
+
+async def _seed_draw(session: AsyncSession) -> Draw:
+    """A real sales_open draw with a one-question skill pool, so the
+    purchase route can be exercised all the way to success."""
+    now = datetime.now(UTC)
+    draw_id = uuid.uuid4()
+    seed = hashlib.sha256(b"self-excl-" + draw_id.bytes).digest()
+    draw = Draw(
+        id=draw_id,
+        prize_copy="test prize",
+        ticket_price_minor=500_00,
+        currency="NGN",
+        close_time=now + timedelta(days=1),
+        draw_time=now + timedelta(days=1, hours=1),
+        state="sales_open",
+        commitment=hashlib.sha256(seed + draw_id.bytes).hexdigest(),
+        server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
+    )
+    session.add(draw)
+    q = SkillQuestion(prompt="Q1")
+    session.add(q)
+    await session.flush()
+    session.add(
+        SkillQuestionOption(
+            question_id=q.id, option_text="correct", is_correct=True, display_order=0
+        )
+    )
+    session.add(
+        SkillQuestionOption(
+            question_id=q.id, option_text="wrong", is_correct=False, display_order=1
+        )
+    )
+    await session.commit()
+    return draw
+
+
+async def _entitlement_for(
+    client: AsyncClient, draw_id: uuid.UUID, token: str
+) -> uuid.UUID:
+    """Answer correctly and return the entitlement id."""
+    nxt = await client.get(
+        f"/api/v1/draws/{draw_id}/skill-questions/next",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    body = nxt.json()
+    correct = next(o["id"] for o in body["options"] if o["text"] == "correct")
+    answer = await client.post(
+        f"/api/v1/skill-questions/attempts/{body['attempt_id']}/answer",
+        json={"option_id": correct},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Idempotency-Key": str(uuid.uuid4()),
+        },
+    )
+    assert answer.status_code == 200, answer.text
+    return uuid.UUID(body["attempt_id"])
 
 
 async def _mfa_code(
@@ -480,3 +542,115 @@ class TestAdminRegistrySurface:
         for verb in ("delete", "patch", "put"):
             r = await getattr(client, verb)("/api/v1/self-exclusions")
             assert r.status_code in (404, 405), f"{verb} -> {r.status_code}"
+
+
+class TestPurchaseRouteEnforcement:
+    """P0 gap closed (Murat, test review 2026-11-26).
+
+    The service-layer check in `issue_paid` was tested; the route-level
+    403 pre-check on POST /tickets/purchase was not. Deleting that block
+    left all 291 tests green — an enforcement path with no signal.
+
+    Risk: P2 probability (a refactor drops it) x I3 impact (an excluded
+    user reaches a live checkout page and a payment intent is created).
+    """
+
+    async def test_excluded_user_cannot_reach_checkout(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        _stub_mailhog: list[tuple[str, str, str]],
+    ) -> None:
+        draw = await _seed_draw(db_session)
+        user_id, _, token = await _register_login(client, _stub_mailhog)
+        entitlement = await _entitlement_for(client, draw.id, token)
+
+        code = await _mfa_code(client, user_id, _stub_mailhog)
+        excl = await client.post(
+            "/api/v1/users/me/self-exclude",
+            json={"confirmation": "EXCLUDE", "otp_code": code},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        assert excl.status_code == 201, excl.text
+
+        # The session is revoked by exclusion, so a fresh one is needed to
+        # reach the route at all. Re-activate ONLY the status so the
+        # exclusion row still stands — this isolates the route check from
+        # the login check, which is the point of the test.
+        user = await db_session.get(User, user_id)
+        assert user is not None
+        user.status = "active"
+        await db_session.commit()
+
+        login = await client.post(
+            "/api/v1/sessions",
+            json={"email": user.email, "password": "correct horse battery staple"},
+            headers={"Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert login.status_code == 201, login.text
+        live_token = login.json()["access_token"]
+
+        # Deliberately an otherwise-VALID purchase: real sales_open draw,
+        # real unconsumed entitlement earned before exclusion. Without the
+        # route check this request returns 201 and creates a payment
+        # intent — so a red here means "an excluded user bought a ticket",
+        # not "some unrelated validation rejected it".
+        resp = await client.post(
+            "/api/v1/tickets/purchase",
+            json={
+                "draw_id": str(draw.id),
+                "entitlement_id": str(entitlement),
+            },
+            headers={
+                "Authorization": f"Bearer {live_token}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        assert resp.status_code == 403, resp.text
+        assert resp.json()["detail"]["code"] == "self_excluded"
+
+        # And no payment intent was created as a side effect.
+        intents = (
+            await db_session.execute(
+                select(PaymentIntentRow).where(PaymentIntentRow.user_id == user_id)
+            )
+        ).scalars().all()
+        assert intents == [], "excluded user must not reach a payment intent"
+
+    async def test_excluded_user_cannot_start_a_skill_question(
+        self,
+        client: AsyncClient,
+        db_session: AsyncSession,
+        _stub_mailhog: list[tuple[str, str, str]],
+    ) -> None:
+        user_id, _, token = await _register_login(client, _stub_mailhog)
+        code = await _mfa_code(client, user_id, _stub_mailhog)
+        await client.post(
+            "/api/v1/users/me/self-exclude",
+            json={"confirmation": "EXCLUDE", "otp_code": code},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        user = await db_session.get(User, user_id)
+        assert user is not None
+        user.status = "active"
+        await db_session.commit()
+
+        login = await client.post(
+            "/api/v1/sessions",
+            json={"email": user.email, "password": "correct horse battery staple"},
+            headers={"Idempotency-Key": str(uuid.uuid4())},
+        )
+        live_token = login.json()["access_token"]
+
+        resp = await client.get(
+            f"/api/v1/draws/{uuid.uuid4()}/skill-questions/next",
+            headers={"Authorization": f"Bearer {live_token}"},
+        )
+        assert resp.status_code == 403, resp.text
+        assert resp.json()["detail"]["code"] == "self_excluded"
