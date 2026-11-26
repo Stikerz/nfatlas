@@ -7,11 +7,12 @@ minter waits until the first one commits, then reads the next number.
 V0.5 is single-user so no real contention; the lock is correctness for
 V1 multi-user demos.
 
-`issue_paid` consumes a skill-question entitlement in the same
-transaction as the mint. The entitlement was created by
-atlas.skill.service.verify_answer on a correct answer; consumption
-marks `consumed_at` on the attempt row so the entitlement is
-single-use even under retry.
+`issue_paid` mints against a confirmed payment. The skill-question
+entitlement it used to consume was removed on 2026-11-26 (AMEND-003):
+the skill question bought Atlas nothing under the governing State law,
+so the purchase is gated only on an open draw and a buyer who is not
+self-excluded. The `skill_question_attempts` table is retained for the
+ADR-005 audit chain — see the `atlas.skill` package docstring.
 
 The free-entry route (`issue_free`, W5 Day 4) was unwired on
 2026-11-23 — see the `atlas.ticket.models` docstring for why the
@@ -22,32 +23,17 @@ deliberately retained.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.audit_log import writer as audit
 from atlas.identity import self_exclusion
-from atlas.skill.models import SkillQuestionAttempt
 from atlas.ticket.models import Ticket
 
 
 class SelfExcludedError(RuntimeError):
     """The buyer is self-excluded (ADR-010). No ticket may be issued."""
-
-
-class EntitlementNotFoundError(LookupError):
-    """attempt_id (entitlement) unknown."""
-
-
-class EntitlementForbiddenError(PermissionError):
-    """Entitlement belongs to another user."""
-
-
-class EntitlementInvalidError(RuntimeError):
-    """Entitlement is not-correct / expired / already-consumed / for a
-    different draw. One error class — the audit-log payload disambiguates."""
 
 
 async def _next_ticket_number(
@@ -136,26 +122,20 @@ async def issue_paid(
     user_id: uuid.UUID,
     draw_id: uuid.UUID,
     payment_intent_id: uuid.UUID,
-    entitlement_id: uuid.UUID,
 ) -> Ticket:
     """Called from the webhook charge.success handler with
-    metadata.purpose == 'ticket'. Consumes the entitlement, then mints
-    the ticket. Idempotent by payment_intent_id — replay is a no-op.
+    metadata.purpose == 'ticket'. Mints the ticket. Idempotent by
+    payment_intent_id — replay is a no-op.
 
     ADR-010 amendment §Enforcement points: the exclusion check lives here,
     not only on the purchase route. The webhook reaches this function
     without passing through the route, and a user who excluded between
-    checkout and capture must not receive a ticket.
+    checkout and capture must not receive a ticket. This is now the ONLY
+    eligibility check on the mint path — the skill entitlement that used
+    to sit beside it was removed on 2026-11-26 (AMEND-003).
     """
     if await self_exclusion.is_excluded(session, user_id=user_id):
         raise SelfExcludedError(str(user_id))
-
-    await _validate_and_consume_entitlement(
-        session,
-        entitlement_id=entitlement_id,
-        expected_user_id=user_id,
-        expected_draw_id=draw_id,
-    )
 
     ticket = await _mint_ticket(
         session,
@@ -180,65 +160,9 @@ async def issue_paid(
             "draw_id": str(draw_id),
             "ticket_id": str(ticket.id),
             "ticket_number": ticket.ticket_number,
-            "entitlement_id": str(entitlement_id),
         },
     )
     return ticket
-
-
-async def check_entitlement(
-    session: AsyncSession,
-    *,
-    entitlement_id: uuid.UUID,
-    expected_user_id: uuid.UUID,
-    expected_draw_id: uuid.UUID,
-) -> SkillQuestionAttempt:
-    """Read-only validation. Raises the typed errors above without any
-    state change. Called from POST /tickets/purchase so the user gets
-    fast feedback on a bad entitlement instead of a silent checkout
-    failure."""
-    attempt = await session.get(SkillQuestionAttempt, entitlement_id)
-    if attempt is None:
-        raise EntitlementNotFoundError(str(entitlement_id))
-    if attempt.user_id != expected_user_id:
-        raise EntitlementForbiddenError(str(entitlement_id))
-    if attempt.draw_id != expected_draw_id:
-        raise EntitlementInvalidError("draw_mismatch")
-    if attempt.is_correct is not True:
-        raise EntitlementInvalidError("not_correct")
-    if attempt.consumed_at is not None:
-        raise EntitlementInvalidError("already_consumed")
-    if (
-        attempt.entitlement_expires_at is None
-        or attempt.entitlement_expires_at <= datetime.now(UTC)
-    ):
-        raise EntitlementInvalidError("expired")
-    return attempt
-
-
-async def _validate_and_consume_entitlement(
-    session: AsyncSession,
-    *,
-    entitlement_id: uuid.UUID,
-    expected_user_id: uuid.UUID,
-    expected_draw_id: uuid.UUID,
-) -> SkillQuestionAttempt:
-    """Called by the webhook path: re-validates + marks consumed_at.
-
-    The purchase-time check_entitlement is not a substitute — a slow
-    Paystack round-trip could see the entitlement expire between check
-    and consume, so the webhook path validates again against the
-    committed state at consumption time.
-    """
-    attempt = await check_entitlement(
-        session,
-        entitlement_id=entitlement_id,
-        expected_user_id=expected_user_id,
-        expected_draw_id=expected_draw_id,
-    )
-    attempt.consumed_at = datetime.now(UTC)
-    await session.flush()
-    return attempt
 
 
 async def list_for_user(

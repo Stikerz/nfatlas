@@ -2,7 +2,9 @@
 
 Asserts the amendment's invariants:
   - an excluded user cannot obtain a ticket by ANY path, including the
-    webhook, which reaches ticket.service.issue_paid without the route;
+    webhook, which reaches ticket.service.issue_paid without the route.
+    Since AMEND-003 removed the skill-question gate, this is the ONLY
+    eligibility check on the mint path;
   - exclusion closes the account and revokes every live session;
   - the operation is idempotent;
   - a failed MFA challenge changes nothing;
@@ -127,28 +129,6 @@ async def _seed_draw(session: AsyncSession) -> Draw:
     )
     await session.commit()
     return draw
-
-
-async def _entitlement_for(
-    client: AsyncClient, draw_id: uuid.UUID, token: str
-) -> uuid.UUID:
-    """Answer correctly and return the entitlement id."""
-    nxt = await client.get(
-        f"/api/v1/draws/{draw_id}/skill-questions/next",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    body = nxt.json()
-    correct = next(o["id"] for o in body["options"] if o["text"] == "correct")
-    answer = await client.post(
-        f"/api/v1/skill-questions/attempts/{body['attempt_id']}/answer",
-        json={"option_id": correct},
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Idempotency-Key": str(uuid.uuid4()),
-        },
-    )
-    assert answer.status_code == 200, answer.text
-    return uuid.UUID(body["attempt_id"])
 
 
 async def _mfa_code(
@@ -328,7 +308,6 @@ class TestServiceLayerEnforcement:
                 user_id=user.id,
                 draw_id=uuid.uuid4(),
                 payment_intent_id=uuid.uuid4(),
-                entitlement_id=uuid.uuid4(),
             )
 
     async def test_next_question_refuses_excluded_user(
@@ -563,7 +542,6 @@ class TestPurchaseRouteEnforcement:
     ) -> None:
         draw = await _seed_draw(db_session)
         user_id, _, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _entitlement_for(client, draw.id, token)
 
         code = await _mfa_code(client, user_id, _stub_mailhog)
         excl = await client.post(
@@ -593,17 +571,13 @@ class TestPurchaseRouteEnforcement:
         assert login.status_code == 201, login.text
         live_token = login.json()["access_token"]
 
-        # Deliberately an otherwise-VALID purchase: real sales_open draw,
-        # real unconsumed entitlement earned before exclusion. Without the
-        # route check this request returns 201 and creates a payment
-        # intent — so a red here means "an excluded user bought a ticket",
-        # not "some unrelated validation rejected it".
+        # Deliberately an otherwise-VALID purchase against a real
+        # sales_open draw. Without the route check this returns 201 and
+        # creates a payment intent — so a red here means "an excluded user
+        # bought a ticket", not "some unrelated validation rejected it".
         resp = await client.post(
             "/api/v1/tickets/purchase",
-            json={
-                "draw_id": str(draw.id),
-                "entitlement_id": str(entitlement),
-            },
+            json={"draw_id": str(draw.id)},
             headers={
                 "Authorization": f"Bearer {live_token}",
                 "Idempotency-Key": str(uuid.uuid4()),
@@ -620,37 +594,3 @@ class TestPurchaseRouteEnforcement:
         ).scalars().all()
         assert intents == [], "excluded user must not reach a payment intent"
 
-    async def test_excluded_user_cannot_start_a_skill_question(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        _stub_mailhog: list[tuple[str, str, str]],
-    ) -> None:
-        user_id, _, token = await _register_login(client, _stub_mailhog)
-        code = await _mfa_code(client, user_id, _stub_mailhog)
-        await client.post(
-            "/api/v1/users/me/self-exclude",
-            json={"confirmation": "EXCLUDE", "otp_code": code},
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Idempotency-Key": str(uuid.uuid4()),
-            },
-        )
-        user = await db_session.get(User, user_id)
-        assert user is not None
-        user.status = "active"
-        await db_session.commit()
-
-        login = await client.post(
-            "/api/v1/sessions",
-            json={"email": user.email, "password": "correct horse battery staple"},
-            headers={"Idempotency-Key": str(uuid.uuid4())},
-        )
-        live_token = login.json()["access_token"]
-
-        resp = await client.get(
-            f"/api/v1/draws/{uuid.uuid4()}/skill-questions/next",
-            headers={"Authorization": f"Bearer {live_token}"},
-        )
-        assert resp.status_code == 403, resp.text
-        assert resp.json()["detail"]["code"] == "self_excluded"

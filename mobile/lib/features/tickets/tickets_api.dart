@@ -6,7 +6,7 @@ import '../../services/api_client.dart';
 /// Thin wrapper over the atlas.ticket HTTP surface (read-only in W7 Day 3).
 ///
 /// GET /tickets/me lands here. POST /tickets/purchase + winner claim
-/// arrive Day 4 alongside the mobile skill/checkout screens.
+/// arrive Day 4 alongside the mobile checkout screen.
 class TicketsApi {
   TicketsApi(this._dio);
 
@@ -19,13 +19,11 @@ class TicketsApi {
     return items.map(TicketSummary.fromJson).toList();
   }
 
-  Future<PurchaseIntent> purchase({
-    required String drawId,
-    required String entitlementId,
-  }) async {
+  /// The skill-question entitlement was removed 2026-11-26 (AMEND-003).
+  Future<PurchaseIntent> purchase({required String drawId}) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/v1/tickets/purchase',
-      data: {'draw_id': drawId, 'entitlement_id': entitlementId},
+      data: {'draw_id': drawId},
     );
     return PurchaseIntent.fromJson(response.data!);
   }

@@ -5,8 +5,8 @@ Walks the demo-plan §2 flagship flow steps 1-5:
   Consumer:
     1. register + OTP + password + login
     2. browse the active draw (GET /draws + /draws/{id})
-    4. buy paid ticket: skill question → answer correctly → purchase →
-       signed webhook → ticket appears
+    4. buy a paid entry: purchase → signed webhook → ticket appears
+       (the skill-question step was removed 2026-11-26, AMEND-003)
     5. view ticket (GET /tickets/me)
 
 Step 3 (free-entry disclosure) was a UI concern and never in backend
@@ -192,26 +192,10 @@ async def test_flagship_flow_end_to_end(
     assert wallet_resp.status_code == 200
     assert wallet_resp.json()["balance_minor"] == 0
 
-    # ── step 4a: skill question → correct answer → entitlement ──────────
-    next_resp = await client.get(
-        f"/api/v1/draws/{draw.id}/skill-questions/next",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert next_resp.status_code == 200
-    question = next_resp.json()
-    correct_id = next(o["id"] for o in question["options"] if o["text"] == "correct")
-    answer_resp = await client.post(
-        f"/api/v1/skill-questions/attempts/{question['attempt_id']}/answer",
-        json={"option_id": correct_id},
-        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-    )
-    assert answer_resp.status_code == 200
-    assert answer_resp.json()["is_correct"] is True
-
     # ── step 4b: purchase intent ─────────────────────────────────────────
     purchase_resp = await client.post(
         "/api/v1/tickets/purchase",
-        json={"draw_id": str(draw.id), "entitlement_id": question["attempt_id"]},
+        json={"draw_id": str(draw.id)},
         headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
     )
     assert purchase_resp.status_code == 201, purchase_resp.text
@@ -267,8 +251,6 @@ async def test_flagship_flow_end_to_end(
         "otp.verified",
         "user.password_set",
         "session.created",
-        "skill_question.issued",
-        "skill_question.answered_correct",
         "payment.intent_created",
         "wallet.ticket_sale_recorded",
         "ticket.issued",

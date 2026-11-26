@@ -146,20 +146,9 @@ async def _buy_paid_ticket(
     client: AsyncClient, draw_id: uuid.UUID, token: str, email: str
 ) -> None:
     """Full purchase + signed webhook. Ticket is minted."""
-    next_resp = await client.get(
-        f"/api/v1/draws/{draw_id}/skill-questions/next",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    q = next_resp.json()
-    correct_id = next(o["id"] for o in q["options"] if o["text"] == "correct")
-    await client.post(
-        f"/api/v1/skill-questions/attempts/{q['attempt_id']}/answer",
-        json={"option_id": correct_id},
-        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-    )
     purchase = await client.post(
         "/api/v1/tickets/purchase",
-        json={"draw_id": str(draw_id), "entitlement_id": q["attempt_id"]},
+        json={"draw_id": str(draw_id)},
         headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
     )
     vendor_ref = purchase.json()["vendor_reference"]

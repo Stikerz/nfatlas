@@ -251,8 +251,7 @@ async def _apply_ticket_success(
     metadata is a programmer error; log and skip.
     """
     draw_id_str = row.metadata_.get("draw_id")
-    entitlement_str = row.metadata_.get("entitlement_id")
-    if not draw_id_str or not entitlement_str:
+    if not draw_id_str:
         # Refuse to touch the ledger with a half-formed intent — the
         # audit event surfaces the misconfiguration for post-mortem.
         await audit.append(
@@ -277,7 +276,6 @@ async def _apply_ticket_success(
         user_id=row.user_id,
         draw_id=uuid.UUID(draw_id_str),
         payment_intent_id=row.id,
-        entitlement_id=uuid.UUID(entitlement_str),
     )
 
 

@@ -1056,6 +1056,95 @@ notes: |
 ---
 
 
+### 2026-11-26 — Skill question removed; Atlas stops claiming a carve-out
+
+```yaml
+---
+ts: 2026-11-26T16:00:00Z
+agent: bmad-agent-pm (John) + bmad-agent-dev (Amelia) + atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/amendments/AMEND-003-prd-skill-question-removal.md (new)
+  - docs/compliance/reviews/REVIEW-003-skill-question-removal.md (new)
+  - docs/risk-register.md (R-REG-09 closed, R-REG-11 opened)
+  - atlas.skill (unwired; routes.py deleted), atlas.ticket.{service,routes,schemas}
+  - atlas.payment.service (webhook), atlas.main (router unregistered)
+  - mobile: features/tickets/entry_purchase_screen.dart (new), features/skill (deleted)
+  - admin: how-it-works, responsible-play, (public)/layout, Sidebar
+  - infrastructure/scripts/seed_v0_5.py
+operation: created + amended
+inputs:
+  - counsel-engagement-brief Q1.5, Q1.6
+  - research/nigerian-draw-classification-research-2026-11-23.md
+  - REVIEW-001 §2.1, §3.1; REVIEW-002
+human_review:
+  reviewer: Adaeze — COMPLETE, approved without reservation (REVIEW-003)
+  status: approved
+  comments: |
+    Founder/EL approval still required. AMEND-001 and AMEND-003 both
+    remain PROPOSED — the PRD is unchanged on disk.
+notes: |
+  FOUNDER DECISIONS: skill question removed; free entry route confirmed
+  not returning; State gaming licence pursued separately.
+
+  Atlas now relies on NO mechanic to sit outside gambling regulation. It
+  is a paid prize draw intending to operate under a State licence it does
+  not yet hold. More coherent than what preceded it — the research
+  indicates both mechanics were legally inert in Nigeria, so Atlas was
+  paying conversion friction and postal operations for protection that
+  probably did not exist.
+
+  SPEC FIRST AGAIN. AMEND-003 was written before any code.
+
+  CODE. Purchase is now gated only on an open draw and a non-excluded
+  buyer. Removed: PurchaseTicketRequest.entitlement_id, check_entitlement,
+  _validate_and_consume_entitlement, the three Entitlement* errors, the
+  entitlement arg to issue_paid, the entitlement_id in payment metadata
+  and the webhook read of it, the skill router registration and
+  skill/routes.py. UNWIRED NOT DELETED: skill_questions,
+  skill_question_options and skill_question_attempts are retained — the
+  ADR-005 audit chain carries skill_question.* events whose subject_id
+  references attempt rows. No migration. Seed script's question pool is
+  now a documented no-op.
+
+  MOBILE. SkillQuestionScreen WAS the purchase flow, so it was replaced
+  rather than deleted: new EntryPurchaseScreen shows the prize, the price
+  and the non-refundable terms, then opens Paystack checkout. Golden
+  renamed skill-question -> entry-purchase and regenerated (the screen
+  genuinely changed; regenerating is correct, not a workaround).
+
+  COPY — the part Adaeze judged. With no mechanic left, "prize
+  competition" became a bare legal assertion by the party it benefits.
+  Per REVIEW-001 §2.1 Atlas must not arbitrate its own classification, so
+  every classification claim was replaced with a mechanic or a verifiable
+  property: "A prize competition, not a lottery" -> "Every draw is
+  provably fair — and you can check it yourself"; "Provably fair prize
+  competitions · Nigeria" -> "Provably fair draws · Nigeria". The skill
+  question section is gone. Copy bans on lottery/raffle/luck UNCHANGED
+  and still binding.
+
+  RISK. R-REG-09 CLOSED — no skill question remains to fail a standard;
+  docs/compliance/skill-questions.md is CANCELLED, not overdue (Adaeze's
+  own late artefact, now unnecessary). R-REG-11 OPENED ⚫ — the entire
+  legal basis is now a single licence Atlas does not hold, with no
+  fallback if refused, delayed or priced out. Adaeze: "more honest and
+  more concentrated. I would not trade back."
+
+  UNCHANGED: PRD §1 hard prerequisite, extended by AMEND-001 §2.2 to bar
+  public marketing spend as well as a real payment rail. Removing the
+  mechanics does not bring launch closer; it clarifies what launch
+  depends on.
+
+  VERIFICATION: 267/267 backend (293 -> 267; 26 entitlement/skill tests
+  removed with the feature) + 5/5 admin + 42/42 mobile, green natively and
+  via `make test` on a rebuilt image. ruff (src tests), mypy src, ESLint,
+  tsc, flutter analyze all clean. ADR-002 outbox gate green.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

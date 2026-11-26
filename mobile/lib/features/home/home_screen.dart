@@ -10,7 +10,7 @@ import '../draws/draws_api.dart';
 import '../account/self_exclusion_screen.dart';
 import '../identity/identity_controller.dart';
 import '../identity/register_screen.dart';
-import '../skill/skill_question_screen.dart';
+import '../tickets/entry_purchase_screen.dart';
 import '../tickets/tickets_api.dart';
 import '../wallet/wallet_api.dart';
 import '../winners/winner_claim_screen.dart';
@@ -297,7 +297,7 @@ class _DrawCard extends StatelessWidget {
       onTap: canEnter
           ? () => Navigator.of(context).push<void>(
                 MaterialPageRoute<void>(
-                  builder: (_) => SkillQuestionScreen(draw: draw),
+                  builder: (_) => EntryPurchaseScreen(draw: draw),
                 ),
               )
           : null,

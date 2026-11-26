@@ -32,7 +32,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">{children}</main>
       <footer className="border-t border-[var(--color-border-subtle)] py-6 text-center text-sm text-[var(--color-text-secondary)]">
-        Atlas · Provably fair prize competitions · Nigeria
+        Atlas · Provably fair draws · Nigeria
       </footer>
     </div>
   );

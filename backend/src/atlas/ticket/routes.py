@@ -1,9 +1,10 @@
 """Ticket HTTP routes.
 
-POST /api/v1/tickets/purchase  — auth + Idempotency-Key. Validates the
-                                 entitlement, creates a ticket-purpose
-                                 payment intent, returns checkout URL.
-                                 Ticket is minted on the webhook.
+POST /api/v1/tickets/purchase  — auth + Idempotency-Key. Creates a
+                                 ticket-purpose payment intent and returns
+                                 the checkout URL. Ticket is minted on the
+                                 webhook. The skill-question entitlement
+                                 gate was removed 2026-11-26 (AMEND-003).
 GET  /api/v1/tickets/me         — auth-only. Lists the caller's tickets.
 """
 
@@ -73,38 +74,6 @@ async def purchase(
             detail={"code": "draw_not_open", "message": "This draw is not accepting entries."},
         )
 
-    # Entitlement pre-check (fast client feedback; webhook re-checks + consumes)
-    try:
-        await ticket_service.check_entitlement(
-            db,
-            entitlement_id=body.entitlement_id,
-            expected_user_id=session.user_id,
-            expected_draw_id=body.draw_id,
-        )
-    except ticket_service.EntitlementNotFoundError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={"code": "entitlement_not_found", "message": "Unknown entitlement id."},
-        ) from exc
-    except ticket_service.EntitlementForbiddenError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "code": "entitlement_forbidden",
-                "message": "This entitlement belongs to another user.",
-            },
-        ) from exc
-    except ticket_service.EntitlementInvalidError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail={
-                "code": f"entitlement_{exc.args[0]}",
-                "message": (
-                    "This entitlement is not usable for this purchase."
-                ),
-            },
-        ) from exc
-
     user = await db.get(User, session.user_id)
     assert user is not None  # active session implies existing user
 
@@ -117,10 +86,7 @@ async def purchase(
         description=f"Ticket for draw {draw.id}",
         idempotency_key=idempotency.key,
         purpose="ticket",
-        extra_metadata={
-            "draw_id": str(draw.id),
-            "entitlement_id": str(body.entitlement_id),
-        },
+        extra_metadata={"draw_id": str(draw.id)},
     )
 
     response = PurchaseTicketResponse(

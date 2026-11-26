@@ -32,7 +32,7 @@ export default function ResponsiblePlayPage() {
         Responsible play
       </h1>
       <p className="mt-4 text-lg text-[var(--color-text-secondary)]">
-        Atlas is a prize competition. It should be fun and time-boxed.
+        Entering an Atlas draw should be fun and time-boxed.
       </p>
 
       <section className="mt-10">

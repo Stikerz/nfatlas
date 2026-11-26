@@ -1,17 +1,26 @@
 /**
- * Trust-story page — how Atlas works as a prize competition.
+ * Trust-story page — how an Atlas draw works.
  *
- * Static, no auth, no DB. Copy per v0.5-demo-plan.md §2.15. Language
- * follows the prize-competition framing per Adaeze
- * §5 guidance — the word "lottery" appears nowhere.
+ * Static, no auth, no DB. Copy per v0.5-demo-plan.md §2.15.
+ *
+ * 2026-11-26 (AMEND-003): the skill question was removed, as the free
+ * entry route was on 2026-11-23. Atlas no longer relies on any mechanic
+ * to sit outside gambling regulation — lawfulness rests on holding a
+ * State gaming licence, which is being pursued and is NOT yet held.
+ *
+ * Per REVIEW-001 §2.1, Atlas must not assert its own regulatory
+ * classification in consumer copy. With no mechanic left to support the
+ * "prize competition" claim, this page now describes the MECHANIC and
+ * lets the licence speak to the classification. The copy bans on
+ * "lottery", "raffle" and "luck" remain in force and unchanged.
  */
 
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'How Atlas works · Provably fair prize competitions',
+  title: 'How Atlas works · Provably fair draws',
   description:
-    'Atlas runs prize competitions with a skill question on every entry. The winner is chosen by a commit-reveal protocol you can verify yourself.',
+    'Every Atlas draw publishes a cryptographic commitment before entries open, and the winner can be verified by anyone after the reveal.',
 };
 
 export default function HowItWorksPage() {
@@ -21,28 +30,16 @@ export default function HowItWorksPage() {
         How Atlas works
       </h1>
       <p className="mt-4 text-lg text-[var(--color-text-secondary)]">
-        A prize competition, not a lottery. Every draw is provably fair.
+        Every draw is provably fair — and you can check it yourself.
       </p>
 
       <section className="mt-10">
         <h2 className="mb-3 text-xl font-semibold">What Atlas is</h2>
         <p>
-          Atlas runs <strong>prize competitions</strong>. Each competition has
-          a prize (cash, an apartment, a car), a ticket price, and a fixed
-          close time. To enter, you buy a ticket after answering a{' '}
-          <strong>skill question</strong>. Every ticket carries the same odds
-          per entry.
-        </p>
-      </section>
-
-      <section className="mt-8">
-        <h2 className="mb-3 text-xl font-semibold">The skill question</h2>
-        <p>
-          Before you can buy a paid ticket, you answer one multiple-choice
-          question rotated from a curated pool. A wrong answer serves you a
-          new question — no penalty, no lockout. The pool grows over time and
-          rotates deterministically per user per minute so nobody can farm
-          easy questions.
+          Each Atlas draw has a prize (cash, an apartment, a car), a fixed
+          entry price, and a fixed close time. You buy an entry; each entry
+          is one ticket in the draw and carries the same odds as every
+          other. You can enter as many times as you like.
         </p>
       </section>
 
