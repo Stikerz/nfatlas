@@ -93,6 +93,19 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          # Pinned deliberately. `channel: stable` alone resolves to
+          # whatever Flutter ships today, and the `flutter analyze` step
+          # below fails the build on INFO-severity findings (W7 Day 5
+          # decision, see the comment on that step). An unpinned SDK behind
+          # an info-level gate breaks on someone else's release schedule:
+          # on 2026-11-24 a stable release deprecated
+          # `package:flutter/material.dart` in favour of
+          # `package:material_ui/material_ui.dart`, which turned every file
+          # importing it into a build failure — 23 of them, none changed.
+          #
+          # Bumping this is a deliberate, reviewable change. Match it to the
+          # team's local toolchain and run `flutter analyze` locally first.
+          flutter-version: 3.47.1
       - run: flutter pub get
       # W7 Day 5 follow-up: all 30 info-level lints resolved. Info-
       # severity findings now gate the build — accidental drift on
