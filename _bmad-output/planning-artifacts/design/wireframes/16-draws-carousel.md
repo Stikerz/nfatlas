@@ -81,6 +81,38 @@ card treatment rather than restoring the border.
 
 ### 4.1 There is no prize photography — and the carousel makes that worse
 
+> **SPIKED AND EVALUATED 2026-11-27.** Built on `spike/prize-photography`
+> and driven on an iOS simulator against the live backend with free
+> Lorem Picsum images (picsum.photos — sources from Unsplash, free to
+> use). **It works, and it is transformative.** The card goes from about a
+> third of the viewport to filling it; the §3.3 dead space disappears
+> entirely; and the warm off-white surface sits well against photographic
+> tone rather than fighting it. The "spreadsheet" problem is solved, not
+> mitigated.
+>
+> Both paths verified live: a draw with a URL renders a full-bleed 16:10
+> cover-fit photograph with the card's rounded corners clipped; a draw
+> without one falls back to the text-only card with no broken-image glyph.
+>
+> **Caveats, stated so nobody reads the screenshot as a finished feature:**
+> - The Picsum images are random landscapes, not the prize. This proves the
+>   *treatment*, not content fit. Real photography is an operations problem
+>   — someone has to photograph a Corolla.
+> - No `cacheWidth`/`cacheHeight`. A 1280x800 JPEG decodes at full size for
+>   a card a third that wide; across a carousel that is real memory on a
+>   low-end Android.
+> - Cover-fit crops whatever ratio the operator supplies. Needs a stated
+>   aspect ratio and guidance, or prizes will be beheaded.
+> - A bare URL column trusts whatever is pasted in, and a third-party host
+>   going down takes the imagery with it. Production needs upload and
+>   hosting Atlas controls.
+> - Goldens cannot evidence this — Flutter's test HTTP client returns a 1x1
+>   transparent image, so a photo-led golden shows an empty frame. The
+>   committed golden honestly shows the text-only fallback; behaviour is
+>   asserted in `draw_carousel_test.dart` and the visual evidence is the
+>   simulator capture.
+
+
 `tone-doc.md` Anchor 1 is unambiguous: **"prize photography dominates the fold"**. `DrawSummary` carries no image field at all. The card is prize *copy* in a serif face, a price, a countdown and a commitment hash.
 
 On a single featured draw, text-only reads as restrained. **In a carousel it reads as a spreadsheet.** Swiping between three visually near-identical text cards gives almost no sense of moving between distinct, desirable things — which is the entire emotional job of this surface. The golden shows it plainly.

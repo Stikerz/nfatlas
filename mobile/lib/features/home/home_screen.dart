@@ -134,12 +134,14 @@ class _HomePanel extends ConsumerWidget {
       padding: const EdgeInsets.all(AtlasSpace.s600),
       child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => _ErrorPanel(message: 'Could not load active draw: $err'),
+        error: (err, _) =>
+            _ErrorPanel(message: 'Could not load active draw: $err'),
         data: (draws) {
           if (draws.isEmpty) {
             return const _EmptyPanel(
               title: 'No active draw',
-              body: 'The next draw will appear here as soon as the operator opens it.',
+              body:
+                  'The next draw will appear here as soon as the operator opens it.',
             );
           }
           return _DrawCard(draw: draws.first, primary: true);
@@ -430,9 +432,8 @@ class _DrawCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final priceMajor = (draw.ticketPriceMinor / 100).toStringAsFixed(2);
     final closeIn = draw.closeTime.difference(DateTime.now().toUtc());
-    final closeLabel = closeIn.isNegative
-        ? 'closed'
-        : 'closes in ${_humanDelta(closeIn)}';
+    final closeLabel =
+        closeIn.isNegative ? 'closed' : 'closes in ${_humanDelta(closeIn)}';
     final canEnter = draw.state == 'sales_open';
 
     return InkWell(
@@ -445,62 +446,78 @@ class _DrawCard extends StatelessWidget {
           : null,
       borderRadius: BorderRadius.circular(AtlasSpace.s300),
       child: Container(
-      padding: const EdgeInsets.all(AtlasSpace.s500),
-      decoration: BoxDecoration(
-        color: AtlasColors.surfaceElevated,
-        borderRadius: BorderRadius.circular(AtlasSpace.s300),
-        border: Border.all(
-          color: primary
-              ? AtlasColors.brandPrimary
-              : AtlasColors.dividerHairline,
-          width: primary ? 2 : 1,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: AtlasColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(AtlasSpace.s300),
+          border: Border.all(
+            color: primary
+                ? AtlasColors.brandPrimary
+                : AtlasColors.dividerHairline,
+            width: primary ? 2 : 1,
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            draw.prizeCopy,
-            style: primary ? AtlasType.displaySection : AtlasType.displayCard,
-          ),
-          const SizedBox(height: AtlasSpace.s200),
-          Row(
-            children: [
-              Text(
-                '${draw.currency == 'NGN' ? '₦' : ''}$priceMajor',
-                style: AtlasType.bodyEmphasis.copyWith(
-                  color: AtlasColors.brandPrimary,
-                ),
-              ),
-              const SizedBox(width: AtlasSpace.s300),
-              Text(
-                closeLabel,
-                style: AtlasType.bodyDefault.copyWith(
-                  color: AtlasColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AtlasSpace.s400),
-          Text(
-            'Commitment ${draw.commitment.substring(0, 12)}…${draw.commitment.substring(draw.commitment.length - 12)}',
-            style: AtlasType.bodyMono.copyWith(
-              color: AtlasColors.textSecondary,
-              fontSize: 12,
-            ),
-          ),
-          if (canEnter) ...[
-            const SizedBox(height: AtlasSpace.s400),
-            Text(
-              'TAP TO ENTER →',
-              style: AtlasType.bodySmall.copyWith(
-                color: AtlasColors.brandPrimary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // tone-doc Anchor 1: "prize photography dominates the fold".
+            // Full-bleed to the card edges, not an inset thumbnail — an
+            // inset image reads as a product listing, which is the
+            // e-commerce register the tone doc rejects.
+            if (draw.prizeImageUrl != null)
+              _PrizeImage(url: draw.prizeImageUrl!),
+            Padding(
+              padding: const EdgeInsets.all(AtlasSpace.s500),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    draw.prizeCopy,
+                    style: primary
+                        ? AtlasType.displaySection
+                        : AtlasType.displayCard,
+                  ),
+                  const SizedBox(height: AtlasSpace.s200),
+                  Row(
+                    children: [
+                      Text(
+                        '${draw.currency == 'NGN' ? '₦' : ''}$priceMajor',
+                        style: AtlasType.bodyEmphasis.copyWith(
+                          color: AtlasColors.brandPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: AtlasSpace.s300),
+                      Text(
+                        closeLabel,
+                        style: AtlasType.bodyDefault.copyWith(
+                          color: AtlasColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AtlasSpace.s400),
+                  Text(
+                    'Commitment ${draw.commitment.substring(0, 12)}…${draw.commitment.substring(draw.commitment.length - 12)}',
+                    style: AtlasType.bodyMono.copyWith(
+                      color: AtlasColors.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                  if (canEnter) ...[
+                    const SizedBox(height: AtlasSpace.s400),
+                    Text(
+                      'TAP TO ENTER →',
+                      style: AtlasType.bodySmall.copyWith(
+                        color: AtlasColors.brandPrimary,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 
@@ -519,7 +536,8 @@ class _TicketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final issued = DateFormat('yyyy-MM-dd HH:mm').format(ticket.issuedAt.toLocal());
+    final issued =
+        DateFormat('yyyy-MM-dd HH:mm').format(ticket.issuedAt.toLocal());
     final isFree = ticket.entrySource == 'free';
     return Row(
       children: [
@@ -537,7 +555,8 @@ class _TicketRow extends StatelessWidget {
           child: Text(
             isFree ? 'FREE' : 'PAID',
             style: AtlasType.bodySmall.copyWith(
-              color: isFree ? AtlasColors.brandAccent : AtlasColors.brandPrimary,
+              color:
+                  isFree ? AtlasColors.brandAccent : AtlasColors.brandPrimary,
             ),
           ),
         ),
@@ -560,6 +579,44 @@ class _TicketRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Full-bleed prize photograph at the head of a draw card.
+///
+/// SPIKE (2026-11-27): remote images loaded straight from the URL the
+/// operator supplied. Three states matter and all three are handled,
+/// because a card showing a grey void on a slow Lagos connection is worse
+/// than one that never promised a photograph:
+///
+///  - loading -> a calm block at the final height, so the card does not
+///               jump when the image arrives
+///  - error   -> collapses to nothing; the text-only card IS the
+///               fallback, not a broken-image glyph
+///  - loaded  -> cover-fit at 16:10
+///
+/// Production needs an operator upload flow and hosting we control. A bare
+/// URL column trusts whatever is pasted into it, and a third-party host
+/// going down takes the prize imagery with it.
+class _PrizeImage extends StatelessWidget {
+  const _PrizeImage({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 16 / 10,
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return Container(color: AtlasColors.surfaceSubtle);
+        },
+        errorBuilder: (context, error, stack) => const SizedBox.shrink(),
+      ),
     );
   }
 }
