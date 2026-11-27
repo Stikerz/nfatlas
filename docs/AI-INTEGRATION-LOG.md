@@ -1668,6 +1668,73 @@ notes: |
 ---
 
 
+### 2026-11-27 — AMEND-004 proposed: commit the prize image, not just the copy
+
+```yaml
+---
+ts: 2026-11-27T20:30:00Z
+agent: bmad-agent-architect (Winston)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/amendments/AMEND-004-prize-image-integrity.md (new)
+operation: created
+inputs:
+  - founder decision 2026-11-27 that Atlas hosts prize imagery
+  - prize-photography-scope.md; ADR-005 §Event catalogue; ADR-006
+human_review:
+  reviewer: S1408661 (EL) + Adaeze (§5 disclosure question)
+  status: not-yet-reviewed
+notes: |
+  CORRECTION RECORDED IN THE PROPOSAL ITSELF. I told the founder the prize
+  description is "committed before entries open", implying the
+  commit-reveal commitment covers it. It does not:
+  commitment = sha256(server_seed + draw_id). The commitment covers the
+  server seed and nothing else. prize_copy is tamper-evident through
+  ADR-005's hash chain instead. The conclusion survived; the design got
+  much cheaper and moved to a different ADR.
+
+  THE PROBLEM. The prize photograph will be the most persuasive element on
+  the card — it is part of the offer — and nothing makes it tamper-evident.
+  An operator could publish a Corolla, sell a week of entries, and swap the
+  file before reveal. The audit chain records prize_copy and says nothing
+  about the image; the published proof says nothing either. A disgruntled
+  entrant has no way to show what they were shown. Latent today only
+  because there is no imagery; live the moment hosting is implemented.
+
+  WHY NOT ADR-006, with the reasoning recorded so nobody re-proposes it:
+  the commitment covers the server seed because that is the secret, and
+  commit-reveal's legibility is the point; folding unrelated material in
+  changes what every existing proof asserts and forces a versioned proof
+  format plus a dual-mode verifier; the image may not exist at draw
+  creation, when the commitment is computed; and ADR-005 already solves
+  this exact problem for prize_copy. ADR-006 needs no amendment — the
+  protocol is correct as it stands.
+
+  PROPOSAL: add prize_image_sha256 and prize_image_url to the
+  draw.committed payload, hashed ON UPLOAD over the stored original before
+  derivatives. Invariant: the image a draw was sold with is the image whose
+  hash sits in its draw.committed row; replacing it later requires a
+  draw.image_replaced event carrying both hashes and an operator id —
+  visible and attributable, never silent. Surfaced on the public proof page
+  beside the commitment and tickets_hash, which already treats hashes as
+  first-class typography. Null stays legitimate for draws without imagery.
+
+  HONEST ABOUT LIMITS: it proves the image was not swapped after
+  publication. It does NOT prove the photograph depicts the actual prize —
+  stock photography of A Corolla rather than THE Corolla is a disclosure
+  question for Adaeze, not a cryptographic one.
+
+  SEQUENCING: strictly downstream of imagery existing, so behind the
+  platform choice, Phase 0 and the licence. But it must be DESIGNED IN now
+  — hashing on upload is trivial while the endpoint is being written and
+  awkward afterwards, and no backfill can hash images for draws that have
+  already closed. Deciding late costs permanently unverifiable history.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
