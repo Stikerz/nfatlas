@@ -91,7 +91,7 @@ Future<void> _openDrawsTab(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('shows how many draws are open', (tester) async {
+  testWidgets('names the ordering rather than the quantity', (tester) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -99,7 +99,10 @@ void main() {
     await tester.pumpWidget(_host([_soonest, _middle, _latest]));
     await _openDrawsTab(tester);
 
-    expect(find.text('3 draws open'), findsOneWidget);
+    // Wireframe 16 §3.1: a count is inventory language and is redundant
+    // beside the dots. The label names the organising principle instead.
+    expect(find.text('Closing soonest first'), findsOneWidget);
+    expect(find.text('3 draws open'), findsNothing);
   });
 
   testWidgets('opens on the draw closing soonest', (tester) async {
@@ -173,7 +176,7 @@ void main() {
     await _openDrawsTab(tester);
 
     // Dots that cannot move are noise, and "1 draws open" is wrong anyway.
-    expect(find.text('1 draws open'), findsNothing);
+    expect(find.text('Closing soonest first'), findsNothing);
     expect(find.bySemanticsLabel('Go to draw 1 of 1'), findsNothing);
     expect(find.text(_soonest.prizeCopy), findsOneWidget);
   });

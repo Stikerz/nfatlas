@@ -1434,6 +1434,89 @@ notes: |
 ---
 
 
+### 2026-11-27 — Sally's design review of the draws carousel (wireframe 16)
+
+```yaml
+---
+ts: 2026-11-27T18:30:00Z
+agent: bmad-agent-ux-designer (Sally)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/design/wireframes/16-draws-carousel.md (new)
+  - mobile/lib/features/home/home_screen.dart
+  - mobile/test/features/draws/draw_carousel_test.dart
+  - mobile/test/design/goldens/draws-carousel.png (regenerated)
+operation: reviewed + amended
+inputs:
+  - PR #20; tone-doc.md Anchor 1 and §Palette; wireframe 02; tokens.md
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    §3 applied in this change. §4 are product decisions for the founder.
+notes: |
+  Design intent recorded for a surface that shipped before it was
+  specified — no wireframe covered a carousel.
+
+  THE RESERVATION WORTH KNOWING ABOUT. tone-doc Anchor 1 explicitly
+  rejects "the busy comparison-shopping bar of alternative prizes" from
+  BOTB, and a swipeable row of alternative prizes is structurally that
+  pattern. Approved anyway, with the distinction written down: BOTB's bar
+  sits ON the draw page, waving alternatives at someone mid-decision. This
+  is a dedicated browse tab a user chose to open. The boundary is hard —
+  this pattern must never appear on the draw detail page or in the entry
+  flow. A future "related draws" block under the entry CTA is the BOTB bar
+  and is out.
+
+  CHANGES APPLIED (§3):
+  - "3 draws open" removed. Quantity-as-signal is the register the tone
+    doc rejects, and it was redundant: the dots say "three" and the
+    Semantics labels say "of 3". Replaced with "Closing soonest first",
+    which names the ORDERING — the one thing the dots cannot communicate,
+    and which makes the close_time ordering legible without urgency copy.
+  - `primary: i == _page` removed. On Home that bordered treatment means
+    "the featured draw"; in the carousel it was being reused to mean "the
+    page you are on" — one visual, two meanings, two screens. Position,
+    cropped neighbours and the filled dot already say which page is
+    active.
+
+  §3.3 — CONSEQUENCE RECORDED RATHER THAN HIDDEN. Dropping `primary`
+  shrinks the display face, so the card now fills about a third of the
+  viewport and the rest is empty. I regenerated the golden and looked: it
+  reads sparse, not restrained. Not reversing — a misleading token is the
+  worse problem, and padding to fill space is not a reason to keep one —
+  but it is real, visible today, and resolves when §4.1 lands.
+
+  §4 RAISED FOR THE FOUNDER, not fixed:
+  - 4.1 There is no prize photography anywhere. DrawSummary has no image
+    field. tone-doc Anchor 1 says "prize photography dominates the fold".
+    Text-only reads as restrained for ONE featured draw; in a carousel of
+    three near-identical text cards it reads as a spreadsheet, which
+    defeats the emotional job of the surface. This is now the largest gap
+    between the tone doc and what ships. Needs prize_image_url, an
+    operator upload flow and a hero card treatment — Winston + John.
+  - 4.2 "closed" shown beside "TAP TO ENTER" (Amelia's finding, confirmed).
+    Recommendation: show "closing now" during the window between
+    close_time passing and the operator closing the draw, and keep the
+    CTA. Saying "closed" while accepting entries is the worse of the two
+    inconsistencies — a user who taps anyway and succeeds trusts us less.
+
+  COMMENDED: the peek (viewportFraction 0.88) is what makes a carousel
+  discoverable at all; the dots are real controls with 44pt targets rather
+  than decoration, which most carousels get wrong and which locks out
+  anyone who cannot drag horizontally; position is announced to screen
+  readers; the single-draw state hides the chrome. Also: no auto-advance
+  and no looping — both correct, and auto-advance would read as exactly
+  the urgency the tone doc bans.
+
+  VERIFICATION: 50/50 mobile, 268/268 backend, 5/5 admin; analyze and lint
+  green. Golden regenerated and inspected after the changes.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

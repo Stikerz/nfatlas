@@ -333,13 +333,18 @@ class _DrawCarouselState extends State<_DrawCarousel> {
     return Column(
       children: [
         const SizedBox(height: AtlasSpace.s500),
+        // Names the ordering rather than the quantity. Wireframe 16 §3.1:
+        // a count is inventory language ("94% sold!"), which tone-doc
+        // Anchor 1 rejects — and it is redundant, since the dots say
+        // "three" and the Semantics labels say "of 3". The organising
+        // principle is the thing the dots cannot communicate.
         if (multiple)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AtlasSpace.s600),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '${draws.length} draws open',
+                'Closing soonest first',
                 style: AtlasType.bodySmall.copyWith(
                   color: AtlasColors.textSecondary,
                 ),
@@ -361,7 +366,13 @@ class _DrawCarouselState extends State<_DrawCarousel> {
                   bottom: AtlasSpace.s600,
                 ),
                 child: SingleChildScrollView(
-                  child: _DrawCard(draw: draws[i], primary: i == _page),
+                  // NOT `primary: i == _page`. Wireframe 16 §3.2: on Home
+                  // the bordered treatment means "the featured draw"; reusing
+                  // it here to mean "the page you are on" gives one visual
+                  // two meanings across two screens. Being centred, with the
+                  // neighbours cropped and the dot filled, already says which
+                  // page is active.
+                  child: _DrawCard(draw: draws[i]),
                 ),
               ),
             ),
