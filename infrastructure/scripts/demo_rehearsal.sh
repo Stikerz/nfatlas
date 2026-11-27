@@ -112,60 +112,23 @@ register_consumer() {
   [ -n "$CONSUMER_TOKEN" ] || fail "login failed: $login_response"
 }
 
-# Answer the skill question correctly for the current CONSUMER_TOKEN,
-# purchase a ticket, feed a signed webhook. May be called multiple
-# times per draw to build the pool.
-# Correct answer for each question seeded by seed_v0_5.py, keyed on a
-# distinctive substring of the prompt.
+# Purchase a ticket for the current CONSUMER_TOKEN and feed a signed
+# webhook. May be called multiple times per draw to build the pool.
 #
-# This was a flat "first option whose text is in this list" match, which
-# answered "What is the square root of 81?" with 7 — the continents
-# answer, which sorts earlier in display_order and is also in the list.
-# Questions rotate per (user, draw, minute bucket), so across six
-# consumers the script failed 1 - 0.9^6 = ~47% of runs on
-# entitlement_not_correct. Keying on the prompt removes the collision.
-correct_answer_for() {
-  case "$1" in
-    *'capital of Nigeria'*)                     printf 'Abuja' ;;
-    *'top stripe of the Nigerian flag'*)        printf 'Green' ;;
-    *'minutes are there in an hour'*)           printf '60' ;;
-    *'12 multiplied by 12'*)                    printf '144' ;;
-    *'Red Planet'*)                             printf 'Mars' ;;
-    *'Water freezes'*)                          printf '0' ;;
-    *'continents are there'*)                   printf '7' ;;
-    *'most native speakers'*)                   printf 'Mandarin Chinese' ;;
-    *'currency is used in the United Kingdom'*) printf 'Pound Sterling' ;;
-    *'square root of 81'*)                      printf '9' ;;
-    *) return 1 ;;
-  esac
-}
+# The skill question this used to answer was removed on 2026-11-26
+# (AMEND-003). Its answer-key helper went with it — along with the
+# ~47%-of-runs flake it once caused, where a flat option match
+# answered "square root of 81" with the continents answer.
 
 buy_ticket_for_current_consumer() {
   local draw_id="$1"
-  local question_json
-  question_json=$(curl -sS "$API/api/v1/draws/$draw_id/skill-questions/next" \
-    -H "Authorization: Bearer $CONSUMER_TOKEN")
-  local attempt_id
-  attempt_id=$(echo "$question_json" | jq -r '.attempt_id')
-  local prompt answer correct_id
-  prompt=$(echo "$question_json" | jq -r '.prompt')
-  answer=$(correct_answer_for "$prompt") \
-    || fail "no known answer for seeded question: $prompt"
-  correct_id=$(echo "$question_json" \
-    | jq -r --arg a "$answer" '.options[] | select(.text==$a) | .id' | head -1)
-  [ -n "$correct_id" ] || fail "answer '$answer' not among options for: $prompt"
-  curl -sS -X POST "$API/api/v1/skill-questions/attempts/$attempt_id/answer" \
-    -H 'Content-Type: application/json' \
-    -H "Authorization: Bearer $CONSUMER_TOKEN" \
-    -H "Idempotency-Key: $(random_uuid)" \
-    -d "{\"option_id\":\"$correct_id\"}" >/dev/null
 
   local purchase
   purchase=$(curl -sS -X POST "$API/api/v1/tickets/purchase" \
     -H 'Content-Type: application/json' \
     -H "Authorization: Bearer $CONSUMER_TOKEN" \
     -H "Idempotency-Key: $(random_uuid)" \
-    -d "{\"draw_id\":\"$draw_id\",\"entitlement_id\":\"$attempt_id\"}")
+    -d "{\"draw_id\":\"$draw_id\"}")
   local vendor_ref amount
   vendor_ref=$(echo "$purchase" | jq -r '.vendor_reference // empty')
   amount=$(echo "$purchase" | jq -r '.amount_minor // empty')
@@ -174,10 +137,18 @@ buy_ticket_for_current_consumer() {
   local body sig
   body="{\"event\":\"charge.success\",\"data\":{\"reference\":\"$vendor_ref\",\"amount\":$amount,\"currency\":\"NGN\",\"status\":\"success\",\"channel\":\"card\",\"fees\":10000,\"customer\":{\"email\":\"$CONSUMER_EMAIL\"}}}"
   sig=$(sign_paystack "$body")
-  curl -sS -X POST "$API/api/v1/payments/webhooks/paystack" \
+  # Check the webhook's status. This used to be >/dev/null, so a rejected
+  # webhook — most often a signature mismatch because the caller's shell
+  # has no ATLAS_PAYSTACK_WEBHOOK_SECRET while docker compose reads it
+  # from .env — surfaced three steps later as the baffling "no ticket
+  # minted for first consumer". Fail where the problem is.
+  local wh_code
+  wh_code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -X POST "$API/api/v1/payments/webhooks/paystack" \
     -H "x-paystack-signature: $sig" \
     -H 'Content-Type: application/json' \
-    -d "$body" >/dev/null
+    -d "$body")
+  [ "$wh_code" = "200" ] || fail "webhook rejected (HTTP $wh_code) for $CONSUMER_EMAIL — if 401, export ATLAS_PAYSTACK_WEBHOOK_SECRET from .env before running this script" 
 }
 
 # ── Step 1: browse active draw ───────────────────────────────────────

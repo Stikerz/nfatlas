@@ -69,6 +69,23 @@ def decode_jwt(token: str) -> dict[str, str | int]:
     )
 
 
+class AccountClosed(HTTPException):
+    """The credentials were correct but the account is permanently closed
+    (ADR-010 self-exclusion). Raised only after the password check, so it
+    reveals nothing to a caller who does not already hold the credentials."""
+
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "account_closed",
+                "message": (
+                    "This account has been closed and cannot be reopened."
+                ),
+            },
+        )
+
+
 async def create(
     db: AsyncSession,
     *,
@@ -82,9 +99,19 @@ async def create(
     ).scalar_one_or_none()
     if user is None or user.password_hash is None:
         raise InvalidCredentials()
-    if user.status != "active":
-        raise InvalidCredentials()
+
+    # Password FIRST, status second. ADR-010 §Enforcement points asks that a
+    # self-excluded user be told "this account has been closed" rather than
+    # being left to think they mistyped — but only someone who has already
+    # proved they hold the credentials may learn that. Checking status first
+    # (as this did until 2026-11-27) would let anyone enumerate closed
+    # accounts by email alone. Verifying the password for every caller is
+    # also the more timing-uniform order.
     if not verify_password(password, user.password_hash):
+        raise InvalidCredentials()
+    if user.status == "closed":
+        raise AccountClosed()
+    if user.status != "active":
         raise InvalidCredentials()
 
     settings = get_settings()

@@ -227,7 +227,36 @@ class TestSelfExcludeEndpoint:
             json={"email": email, "password": "correct horse battery staple"},
             headers={"Idempotency-Key": str(uuid.uuid4())},
         )
-        assert relogin.status_code >= 400, relogin.text
+        # ADR-010 §Enforcement points: told plainly that the account is
+        # closed, not left to think they mistyped. Found live on
+        # 2026-11-27 returning invalid_credentials instead.
+        assert relogin.status_code == 403, relogin.text
+        assert relogin.json()["detail"]["code"] == "account_closed"
+
+    async def test_wrong_password_on_closed_account_reveals_nothing(
+        self,
+        client: AsyncClient,
+        _stub_mailhog: list[tuple[str, str, str]],
+    ) -> None:
+        """The closed-account message is gated behind the password check,
+        so it cannot be used to enumerate closed accounts by email."""
+        user_id, email, token = await _register_login(client, _stub_mailhog)
+        code = await _mfa_code(client, user_id, _stub_mailhog)
+        await client.post(
+            "/api/v1/users/me/self-exclude",
+            json={"confirmation": "EXCLUDE", "otp_code": code},
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Idempotency-Key": str(uuid.uuid4()),
+            },
+        )
+        resp = await client.post(
+            "/api/v1/sessions",
+            json={"email": email, "password": "not the right password"},
+            headers={"Idempotency-Key": str(uuid.uuid4())},
+        )
+        assert resp.status_code == 401, resp.text
+        assert resp.json()["detail"]["code"] == "invalid_credentials"
 
     async def test_wrong_mfa_code_changes_nothing(
         self,

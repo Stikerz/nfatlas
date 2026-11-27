@@ -1145,6 +1145,87 @@ notes: |
 ---
 
 
+### 2026-11-27 — Live app verification: two defects tests did not catch
+
+```yaml
+---
+ts: 2026-11-27T10:00:00Z
+agent: bmad-agent-dev (Amelia)
+session: claude-code
+artefact:
+  - infrastructure/scripts/demo_rehearsal.sh
+  - atlas.identity.session_service (AccountClosed)
+  - backend/tests/identity/test_self_exclusion.py
+operation: amended
+inputs:
+  - docs/adr/ADR-010 §Enforcement points
+  - AMEND-003 (skill question removal)
+human_review:
+  reviewer: Adaeze (login copy is consumer-facing) + S1408661 (EL)
+  status: not-yet-reviewed
+notes: |
+  Ran the actual stack rather than only the suite. Two defects surfaced
+  that 268 green tests did not.
+
+  1. DEMO REHEARSAL WAS BROKEN BY AMEND-003. The repo's own flagship smoke
+     script still answered a skill question and posted entitlement_id.
+     Nothing in CI runs it, so the suite stayed green while the script that
+     proves the demo honest was dead. It is a W9 §8 gate. Fixed: the
+     answer-key helper is gone (and with it the ~47%-of-runs flake it once
+     caused) and purchase posts draw_id alone. All 9 steps green.
+
+  2. LOGIN CONTRADICTED ADR-010. §Enforcement points says a self-excluded
+     user gets "this account has been closed"; live, they got
+     invalid_credentials — indistinguishable from a typo, so a person who
+     chose to stop is nudged to retry or contact support. The cause was
+     ordering: status was checked BEFORE the password, so returning a
+     distinct message there would have let anyone enumerate closed
+     accounts by email alone. Reordered to verify the password first, then
+     raise AccountClosed (403) only for a caller who has proved they hold
+     the credentials; a wrong password on a closed account still returns
+     invalid_credentials. Also the more timing-uniform order. Two tests
+     added, including one asserting the non-disclosure.
+
+  THIRD FINDING, PROCESS NOT PRODUCT. The rehearsal discarded the webhook
+  response with >/dev/null, so a signature rejection surfaced three steps
+  later as "no ticket minted for first consumer". That cost a debug cycle
+  chasing a phantom bug in my own change. It now checks the status and
+  names the likely cause (the caller's shell lacking
+  ATLAS_PAYSTACK_WEBHOOK_SECRET while docker compose reads it from .env).
+  Demonstrated both ways: fails at step 2 with HTTP 401 without the
+  secret, green with it.
+
+  DRIVEN LIVE, NOT JUST LAUNCHED:
+  - OpenAPI confirms no skill routes and no /tickets/free remain.
+  - Full flagship flow: register -> purchase (no entitlement) -> signed
+    webhook -> ticket minted -> close -> reveal -> proof -> independent
+    verifier reproduces the winner -> audit chain verified. 6 winners.
+  - Self-exclusion end to end: purchase 201 before; wrong MFA 400 with no
+    state change; real MFA 201 (sessions_revoked 1, reversible false,
+    cross_account_enforced false); old session 401; re-login 403
+    account_closed; DB shows status=closed, bvn_hash NULL,
+    excluded_by=user_self; audit carries bvn_enforced=false;
+    re-registration with a new email returns 201 — the documented Phase A
+    limit, observed rather than assumed.
+  - Admin UI: /admin/self-exclusions is 307 to /login when unauthenticated
+    and renders the live exclusion row as superadmin. Sidebar no longer
+    offers Free entries or Skill questions.
+  - Public pages: no "skill question", "prize competition", "free entry"
+    or "not a lottery" anywhere in the rendered text; responsible-play
+    carries the balance disclosure and the in-app route.
+
+  NOT VERIFIED LIVE: the Flutter app. flutter analyze, 42 widget/golden
+  tests and a regenerated golden cover EntryPurchaseScreen, but no
+  simulator was driven. That gap stands.
+
+  VERIFICATION: 268/268 backend + 5/5 admin + 42/42 mobile; make typecheck,
+  make lint, ADR-002 outbox gate all green; demo_rehearsal.sh green.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
