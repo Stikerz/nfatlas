@@ -8,18 +8,36 @@
 
 ## 1. The product decision
 
-Atlas is a **prize competition** platform, not a lottery and not gambling. Every draw operates under the same two mechanics that let UK operators (BOTB, Omaze, Raffle House, Aspire) sit outside gambling regulation:
+> **Amended 2026-11-26 (AMEND-001, AMEND-003), applied 2026-11-27.** The 2026-06-29 version of this section named two mechanics that kept Atlas outside gambling regulation. Both have been removed. The strikethroughs below are deliberate: this PRD records the decision, it does not pretend the mechanics were never specified.
 
-1. **A free entry route on every draw,** producing tickets that go into the **same pool** with the **same odds** as paid entries. The free route is disclosed on every draw page, not buried in T&Cs.
-2. **A skill question on every paid entry,** requiring genuine knowledge or judgment. "What colour is the sky" does not qualify — the question must be substantive enough that a non-trivial fraction of entrants get it wrong if they don't try.
+Atlas is a **paid prize draw platform** intending to operate under a Nigerian State gaming licence.
 
-**Marketing copy must never use "lottery," "raffle," "luck of the draw," or equivalent.** Compliance copy is part of the design system, not an afterthought.
+**It does not rely on any exemption, carve-out or mechanic to sit outside gambling regulation.** The two that were specified are gone:
+
+1. ~~A free entry route on every draw, producing tickets that go into the same pool with the same odds as paid entries.~~ **Removed 2026-11-23** by founder decision. It was never operable — no P.O. box was ever leased (R-FREE-01, flagged in REVIEW-001 §6.1 and left open). Confirmed 2026-11-26 as not returning, irrespective of counsel Q1.6.
+2. ~~A skill question on every paid entry, requiring genuine knowledge or judgment.~~ **Removed 2026-11-26** by founder decision. The implementation never met the standard this section set — REVIEW-001 §3.1 rejected it for real-user launch on 2026-07-08 and that verdict was never lifted — and the 2026-11-23 research found no skill carve-out in the governing State law for it to qualify for. It was friction with no legal return, and may have carried exposure of its own under the Lagos advertising code.
+
+**Lawfulness rests on holding a State gaming licence. Atlas does not yet hold one.**
+
+**Marketing copy must never use "lottery," "raffle," "luck of the draw," or equivalent.** Unchanged and still binding. Compliance copy is part of the design system, not an afterthought.
+
+**Atlas must not assert its own regulatory classification in consumer copy** (REVIEW-001 §2.1). With no mechanic left to support a "prize competition" claim, describe the mechanic and let the licence speak to the classification.
 
 ### Nigerian legal caveat (must be resolved before launch)
 
-The prize-competition carve-out is **UK-derived.** Nigeria's National Lottery Act 2005 and the NLRC have historically interpreted "lottery" broadly. A standalone prize-competition platform not tied to a primary product purchase **may still require NLRC licensing** or a different structuring approach in Nigeria.
+> **Rewritten 2026-11-27.** The 2026-06-29 version of this caveat was framed against a statute that no longer exists.
 
-**Hard prerequisite for V1:** Nigerian gambling/promotions counsel signs off on the model and any licence/permit obligations **before any code touches a real payment rail.** This is Phase 0 work, not something to figure out after the beta.
+The prize-competition carve-out is **UK-derived and may have no Nigerian equivalent at all.**
+
+The **National Lottery Act 2005 was nullified** by the Supreme Court of Nigeria on 22 November 2024 (*AG Lagos State & Ors v AG Federation*, SC/1/2008). Lottery and gaming are now **exclusively State matters** and the NLRC holds no national licensing authority. The President declined assent to the Central Gaming Bill 2025 in reliance on that judgment, so there is no federal statute for Atlas to be exempt from.
+
+The operative law in Atlas's launch market is the **Lagos State Lotteries and Gaming Authority Law 2021**, which on Atlas's own desk research defines "Gaming" as any scheme distributing prizes **by lot or chance with no payment element**, and expressly classes promotional competitions as "Other lotteries". On that reading **neither a skill question nor a free entry route removes Atlas from the perimeter, and a State licence is required.**
+
+Source: `research/nigerian-draw-classification-research-2026-11-23.md`. Single-pass desk research, not legal advice, self-reporting medium confidence on several findings; the SC/1/2008 judgment text was not retrieved. **Counsel must verify it first.**
+
+**Hard prerequisite for V1 (unchanged and reaffirmed):** Nigerian gaming counsel signs off on the model and any licence/permit obligations **before any code touches a real payment rail.** Counsel has **not** been engaged as at 2026-11-27.
+
+**Additional prerequisite (new, AMEND-001 §2.2):** because advertising or promoting an unlicensed scheme may itself be an offence under the Lagos regime, **no public marketing spend before counsel sign-off either.** The original caveat gated code; it should have gated promotion too.
 
 ---
 
@@ -27,19 +45,19 @@ The prize-competition carve-out is **UK-derived.** Nigeria's National Lottery Ac
 
 ### What V1 is
 
-A mobile-first prize competition platform that lets a user in Nigeria:
+A mobile-first paid prize draw platform that lets a user in Nigeria:
 
 - Register, verify identity (light KYC), and log in.
 - Browse currently active draws and view a single past draw archive.
 - Pay for entries via Paystack (card + bank transfer).
-- Enter for free via a documented free-entry route (see §3).
-- Answer the skill question, receive a ticket, and see it in their account.
+- ~~Enter for free via a documented free-entry route (see §3).~~ **Struck 2026-11-23** — the free entry route was removed and was never operable (R-FREE-01).
+- Buy an entry and receive a ticket, visible in their account. *(Was "answer the skill question, receive a ticket" — the skill question was removed 2026-11-26.)*
 - Watch a published draw result and, if they won, follow a guided claim flow.
 - Contact support.
 
 A back-office that lets the operator:
 
-- Configure and schedule a draw (prize, ticket price, max entries, close date, draw date, skill question).
+- Configure and schedule a draw (prize, ticket price, close date, draw date). *(`max entries` struck 2026-11-23 — the `entries_cap` field existed but was never enforced, and the founder decided V1 operates with no per-draw cap. `skill question` struck 2026-11-26.)*
 - Review and approve KYC submissions.
 - Run a draw (commit, sell, close, reveal, publish, audit).
 - Manage prize fulfilment workflow (contact winner, verify, dispatch, sign-off).
@@ -69,7 +87,7 @@ Explicit cuts from the long-form PRD. These all have a place; none of them ship 
 V1 must prove three things and nothing else:
 
 1. **Trust:** users believe the draw is fair, payments are safe, and winners actually get paid.
-2. **Compliance:** the prize-competition model holds up under NLRC scrutiny.
+2. **Compliance:** Atlas holds the State gaming licence its model requires. *(Rewritten 2026-11-27 — was "the prize-competition model holds up under NLRC scrutiny". The NLRC has no national licensing authority since SC/1/2008, and Atlas no longer claims a carve-out.)*
 3. **Unit economics:** at modest scale (see §5), a single Paystack-driven funnel produces predictable CAC and AOV.
 
 Everything cut above is a growth/retention/scale lever. None of them matter if V1 fails at any of the three above.
@@ -78,12 +96,16 @@ Everything cut above is a growth/retention/scale lever. None of them matter if V
 
 ## 3. Functional requirements (V1)
 
-### 3.1 Prize-competition mechanics (first-class)
+### 3.1 Draw mechanics (first-class)
 
-- Every draw has a **free entry route**. V1 free route: **postal entry** (mail to a P.O. box with a handwritten entry slip — operator transcribes into the system within 24h of receipt). One free entry per person per draw.
-- Every paid entry path requires a **skill question** answered before payment confirmation. Wrong answer = entry rejected, no charge. Skill questions are configured per draw by the operator (multiple-choice from a small pool, rotated).
-- **Tickets are stored with an `entry_source` field** (`paid` | `postal_free`). The draw engine treats both identically. Audit logs and the post-draw proof include the split.
-- Every draw page displays the free-entry route prominently, the total entries (paid + free) at close, and the skill question requirement.
+> **Retitled from "Prize-competition mechanics" and rewritten 2026-11-27** (AMEND-001 §2.3, AMEND-003 §3.3).
+
+- ~~Every draw has a **free entry route** (postal entry to a P.O. box, transcribed within 24h). One free entry per person per draw.~~ **Struck 2026-11-23.** Never implemented as specified — no P.O. box was ever leased.
+- ~~Every paid entry path requires a **skill question** answered before payment confirmation.~~ **Struck 2026-11-26.**
+- **Tickets are stored with an `entry_source` field** (`paid` | `free`). The draw engine treats both identically. Audit logs and the post-draw proof include the split. *(Corrects a long-standing drift: this said `postal_free`; the schema has always said `free`.)*
+- **The `'free'` enum value, the `free_entry_slips` table and the `skill_question_*` tables are retained deliberately and must not be dropped.** Historical tickets carry `entry_source='free'`, published commit-reveal proofs report the paid/free split, and the ADR-005 hash-chained audit log references rows in those tables. A published proof must never be rewritten.
+- Every draw page displays the total entries at close.
+- **Lawfulness rests on holding a State gaming licence, not on draw mechanics.** No mechanic in this section is load-bearing for classification. Do not reintroduce one as a compliance measure without an amendment and counsel sign-off.
 
 ### 3.2 Identity
 
@@ -91,7 +113,8 @@ Everything cut above is a growth/retention/scale lever. None of them matter if V
 - Login: email/phone + password. MFA via TOTP optional, mandatory for accounts that have won a prize before claim.
 - KYC: BVN-based identity check via a vendor (Smile Identity / Dojah / Prembly — vendor selection is Phase 0). Document upload for prize claims above a configurable threshold.
 - Age gate: 18+. Hard block at registration.
-- Self-exclusion: a user can self-exclude permanently from settings. Re-registration with the same BVN is blocked.
+- **Self-exclusion (Phase A — shipped 2026-11-24):** a user can permanently close their account from settings. Closure is enforced at login and at ticket purchase, every session is revoked, and the account cannot enter any draw. **There is no reversal.** A closed account's login returns an explicit "this account has been closed" message, gated behind the password check so exclusion status cannot be enumerated (REVIEW-004).
+- **Self-exclusion (Phase B — NOT DELIVERED):** blocking re-registration by the same person requires BVN matching and is **blocked on ADR-007 (KYC), which is unbuilt.** Until Phase B ships, a closed account does not prevent the same person opening a new one with a different email and phone. **Consumer copy must not claim otherwise** — see REVIEW-002 §6.1 for the withdrawn wording, and `test_phase_a_does_not_block_reregistration` for the test that enforces the boundary.
 
 ### 3.3 Wallet & ledger
 
@@ -106,11 +129,11 @@ Everything cut above is a growth/retention/scale lever. None of them matter if V
 - **Paystack only** in V1 (card + bank transfer). Inline checkout for card; redirect for bank transfer.
 - Every payment intent has a **client-supplied idempotency key.** Double-clicking "Pay" cannot produce two charges.
 - Webhook-driven confirmation. Signed webhooks; verify HMAC.
-- Failed payments roll back the pending ticket; the skill-question session can be resumed within 30 minutes without re-answering.
+- Failed payments roll back the pending ticket. *(The skill-question resume window was struck 2026-11-26 — there is no skill question to resume.)*
 
 ### 3.5 Ticket
 
-- A ticket is issued **only after** (a) correct skill answer, (b) confirmed payment OR validated free-entry transcription, (c) draw still open.
+- A ticket is issued **only after** (a) confirmed payment, (b) the draw still open, (c) the buyer not self-excluded. *(Rewritten 2026-11-27: the skill-answer and free-entry-transcription conditions were struck with those features; the self-exclusion condition was added by ADR-010 Phase A.)*
 - Ticket purchase is **end-to-end idempotent** on a client-supplied request key, not just at the payment layer.
 - Ticket numbers are assigned at issuance, not at purchase intent. No reservation of numbers.
 
@@ -163,7 +186,7 @@ Six modules. Each one owns its tables, services, and HTTP routes. Communication 
 1. **Identity** — registration, login, OTP, MFA, KYC adapter, self-exclusion.
 2. **Wallet & Ledger** — accounts, journal entries, balance queries, reconciliation.
 3. **Payment** — Paystack adapter, intents, webhooks, refunds.
-4. **Ticket** — skill question, idempotent issuance, ownership, free-entry transcription.
+4. **Ticket** — idempotent issuance, ownership, self-exclusion enforcement at purchase. *(Skill question and free-entry transcription struck 2026-11-26 / 2026-11-23.)*
 5. **Draw Engine** — commit/sale/close/reveal lifecycle, CSPRNG, public entropy fetcher, replay, audit log.
 6. **Admin** — RBAC, operator workflows, prize fulfilment, support tickets.
 
@@ -178,7 +201,7 @@ Each module has one **primary owner agent** (drives implementation), one or more
 | Identity | Backend Engineer Agent | Solution Architect; Compliance & Risk (KYC adapter, self-exclusion, age gate) | Engineering Lead |
 | Wallet & Ledger | Backend Engineer Agent | Solution Architect; Compliance & Risk; QA | Engineering Lead + Finance Lead (two approvals) |
 | Payment | Backend Engineer Agent | Solution Architect; Compliance & Risk; QA | Engineering Lead + Finance Lead (two approvals) |
-| Ticket | Backend Engineer Agent | Solution Architect; Compliance & Risk (skill question + free-entry route); QA | Engineering Lead |
+| Ticket | Backend Engineer Agent | Solution Architect; Compliance & Risk (entry mechanics + self-exclusion enforcement); QA | Engineering Lead |
 | Draw Engine | Backend Engineer Agent | Solution Architect; Compliance & Risk; QA | Engineering Lead + Compliance Lead (two approvals) |
 | Admin | Frontend Engineer Agent (Next.js admin UI) + Backend Engineer Agent (RBAC + workflows) | Solution Architect; QA; Compliance & Risk for any operator action that touches money or draws | Engineering Lead |
 
@@ -227,19 +250,20 @@ Targets marked TODO need the founders to commit numbers from the financial model
 ## 6. Phased delivery (6 months)
 
 ### Phase 0 — Foundations (weeks 0–4)
-- Nigerian gambling/promotions counsel engaged; written opinion on the prize-competition model and any NLRC obligations.
+- Nigerian **gaming** counsel engaged; written opinion on which **State** regime governs an online operator (counsel Q7) and what licence it requires, at what cost (Q1). *(Rewritten 2026-11-27 — the NLRC framing is void.)*
 - KYC vendor selected and contracted (Smile / Dojah / Prembly).
 - Paystack merchant account live with settlement bank set up.
-- Skill-question content set drafted and reviewed by counsel.
-- Free-entry route operationalised: P.O. box leased, entry slip designed, transcription workflow documented.
+- ~~Skill-question content set drafted and reviewed by counsel.~~ **Struck 2026-11-26** — there is no skill question. `docs/compliance/skill-questions.md` is cancelled, not outstanding.
+- ~~Free-entry route operationalised: P.O. box leased, entry slip designed, transcription workflow documented.~~ **Struck 2026-11-23** — never completed, no longer applicable.
+- **Nigerian gaming licence application submitted, and counsel Q7/Q1 answered.** This replaces both struck criteria and is now the whole of the Phase 0 legal gate. It is the harder of the two it replaces.
 - Infrastructure baseline: GitHub org, managed platform account, Postgres + Redis + S3 provisioned, CI green.
 - Schema for Identity + Wallet/Ledger merged and migrated.
 
 ### Phase 1 — Closed beta (weeks 4–12)
 - Identity, Wallet/Ledger, Payment, Ticket modules functionally complete.
-- Flutter app: signup → KYC → browse one draw → answer skill question → pay → see ticket.
+- Flutter app: signup → KYC → browse one draw → pay → see ticket. *(Skill-question step struck 2026-11-26.)*
 - Admin Next.js app: create draw, review KYC, view tickets.
-- **One real-money draw** with a small (~₦100k) cash prize. Invited beta users only. Run end-to-end including KYC, ticket purchase, free-entry route validation, winner notification, payout.
+- **One real-money draw** with a small (~₦100k) cash prize. Invited beta users only. Run end-to-end including KYC, ticket purchase, winner notification, payout. **Gated on the State licence** — see §1. *(Free-entry route validation struck 2026-11-23.)*
 - Nightly reconciliation job operational.
 - Sentry, logs, basic uptime monitoring live.
 
@@ -263,11 +287,11 @@ Targets marked TODO need the founders to commit numbers from the financial model
 
 Tracked separately, but listed here so they don't get lost:
 
-1. **Legal:** NLRC posture on the prize-competition model — does Atlas need a licence, a permit, or nothing? Counsel-driven.
+1. **Legal:** which **State** regime governs (counsel Q7), and under it does Atlas need a full gaming licence or a proportionate promotional permit, at what cost and timeline (counsel Q1)? Atlas's working position is that a licence is required and no mechanic avoids it. Counsel-driven. *(Rewritten 2026-11-27.)*
 2. **Tax:** Nigerian WHT obligations on cash prizes (and on the value of vehicle prizes). Who files? Who pays? Net-of-tax vs gross-of-tax prize advertising.
 3. **Vehicle prize logistics:** dealer partnership vs operator-owned fleet. Title transfer process. Logbook / insurance handover.
-4. **Free-entry route specifics:** P.O. box vs scanned email submission vs both. Throughput model for transcription at scale (manual is fine for V1 launch volumes, not for month 12).
-5. **Skill question authoring policy:** who writes them, how often they rotate, what the difficulty floor is. This shapes legal defensibility.
+4. ~~**Free-entry route specifics:** P.O. box vs scanned email submission vs both.~~ **Closed 2026-11-23** — the route was removed and is not returning. Reopens only if counsel Q1.6 says a genuine free route is load-bearing, which would be roughly a week of engineering.
+5. ~~**Skill question authoring policy:** who writes them, how often they rotate, what the difficulty floor is.~~ **Closed 2026-11-26** — there is no skill question. `docs/compliance/skill-questions.md` is cancelled.
 6. **Live-streamed draws (V2 trigger):** when does volume justify the cost? Probable trigger is **first prize value above ₦25M**.
 7. **Customer support staffing:** in-house or outsourced. Hours of coverage. WhatsApp inbound vs email-first.
 8. **KPI targets** marked TODO in §5.
