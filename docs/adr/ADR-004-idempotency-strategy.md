@@ -82,3 +82,24 @@ Idempotency records are retained for **30 days** then purged by a scheduled job.
 - Every mutation endpoint listed in §Scope rejects requests without an `Idempotency-Key` header (or generates one server-side per the fallback rule, recorded as such).
 - Reuse of a key with a different request body returns 409, not a silent re-execution.
 - A QA test in `e2e/` covers the double-click ticket-purchase scenario (critical journey #8 in `delivery-framework.md §8`).
+
+
+---
+
+## Amendment (2026-11-27) — free-entry and skill-question endpoints removed
+
+**Proposed by:** 🏗️ Winston · **Approver:** S1408661 (EL)
+**Status of base decision:** unchanged. Idempotency strategy, key format, storage and replay semantics are all as decided.
+
+The §Scope list names endpoints that no longer exist, and one whose purpose changed. Per CLAUDE.md the original text is not rewritten; this amendment states the current scope.
+
+**Endpoint list, as at 2026-11-27:**
+
+- `POST /api/v1/payments/intents` — unchanged.
+- `POST /api/v1/tickets/purchase` — unchanged **as an endpoint**, but the parenthetical *"covers paid + free-entry transcription submission"* is stale. `POST /api/v1/tickets/free` was removed on 2026-11-23 (AMEND-001) and the skill-question entitlement gate on 2026-11-26 (AMEND-003). The route now takes `draw_id` alone.
+- `POST /api/v1/users/me/self-exclude` — **added 2026-11-24** (ADR-010 Phase A). Requires an idempotency key: a replay must not re-revoke sessions or emit a second `self_exclusion.activated` event. Asserted by `test_exclude_is_idempotent`.
+- `POST /api/v1/withdrawals`, `POST /api/v1/draws/{id}/commit`, `POST /api/v1/draws/{id}/reveal` — unchanged.
+
+**Removed from scope:** `POST /api/v1/tickets/free`; `POST /api/v1/skill-questions/attempts/{id}/answer`.
+
+Nothing in the base decision needs revisiting — the strategy held across two feature removals and one addition without amendment to its substance, which is the outcome an ADR of this kind should have.

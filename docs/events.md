@@ -231,7 +231,8 @@ module reacting. Framework names are from `delivery-framework.md §Event surface
 | `wallet.prize_awarded` | `wallet/service.py:270` | — | Winner payout notification |
 | `wallet.refund_issued` | `wallet/service.py:454` | `RefundIssued` | Refund confirmation |
 | `ticket.issued` | `ticket/service.py:116` | `TicketIssued` | Ticket confirmation |
-| `ticket.free_transcribed` | `ticket/service.py:301` | `FreeEntryTranscribed` | Confirmation on the free route — the entry path the legal model depends on |
+| `self_exclusion.activated` | `identity/self_exclusion.py` | — | **Added 2026-11-24** (ADR-010 Phase A). Payload carries `bvn_enforced: false` so Phase A rows are distinguishable from Phase B. Allowlisted as deferred — no confirmation consumer yet |
+| ~~`ticket.free_transcribed`~~ | *(producer removed)* | — | **No live producer since 2026-11-23** (AMEND-001). The free route was removed; historical events remain in the ADR-005 chain and are valid. Its old note — "the entry path the legal model depends on" — was wrong twice over: the route was never operable (R-FREE-01, no P.O. box was ever leased), and the 2026-11-23 research indicates it conferred no protection under the governing State law |
 | `draw.committed` | `draw/service.py:104` | `DrawCommitted` | Publishes the commitment; the trust story starts here |
 | `draw.entries_snapshot` | `draw/service.py:188` | `DrawClosed` | Sales closed, tickets hash published |
 | `draw.revealed` | `draw/service.py:302` | `DrawRevealed` | Public proof surface |
@@ -267,11 +268,13 @@ nobody dares touch.
 | `wallet.ticket_sale_recorded` | `wallet/service.py:335` | As above |
 | `wallet.payment_fee_posted` | `wallet/service.py:400` | As above |
 | `ticket.paid_purchase_completed` | `ticket/service.py:163` | Same domain moment as `ticket.issued`, which carries it |
-| `skill_question.issued` | `skill/service.py:164` | Question delivery is synchronous and user-facing |
-| `skill_question.answered_correct` / `_wrong` | `skill/service.py:226` | Answer outcome is returned in the response; nothing follows it |
+| ~~`skill_question.issued`~~ | *(producer unwired)* | **No live producer since 2026-11-26** (AMEND-003). Historical events remain in the chain |
+| ~~`skill_question.answered_correct` / `_wrong`~~ | *(producer unwired)* | As above |
 | `notification.winner_selected` | `notification/winner.py:31` | **This is the consumer**, not a producer. It records that delivery was attempted |
 
-**14 sites, 15 event names** (the skill answer site emits one of two names).
+**As at 2026-11-27:** three producers were unwired without being deleted — `ticket.free_transcribed` (2026-11-23) and the two `skill_question.*` sites (2026-11-26) — and `self_exclusion.activated` was added (2026-11-24, ADR-010 Phase A).
+
+> **Retention rule (ADR-005 amendment 2026-11-27).** The tables these dead producers wrote to — `free_entry_slips`, `skill_questions`, `skill_question_options`, `skill_question_attempts` — and the `'free'` member of `tickets.entry_source` **must not be dropped.** Audit-log `subject_id` values reference them, and published commit-reveal proofs report the paid/free split. A published proof must never be rewritten.
 
 ### Whole modules excluded
 

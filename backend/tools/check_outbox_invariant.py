@@ -76,9 +76,12 @@ ALLOWLIST: dict[str, str] = {
     "wallet.ticket_sale_recorded": "As wallet.ticket_purchase_posted",
     "wallet.payment_fee_posted": "As wallet.ticket_purchase_posted",
     "ticket.paid_purchase_completed": "Same domain moment as ticket.issued, which carries it",
-    "skill_question.issued": "Question delivery is synchronous and user-facing",
-    "skill_question.answered_correct": "Outcome is returned in the response; nothing follows",
-    "skill_question.answered_wrong": "As skill_question.answered_correct",
+    "skill_question.issued": "UNWIRED 2026-11-26 — no live producer",
+    # Producers unwired 2026-11-26 (AMEND-003) — the skill question was
+    # removed. Retained for the historical ADR-005 audit chain, same as
+    # ticket.free_transcribed below.
+    "skill_question.answered_correct": "UNWIRED 2026-11-26 — no live producer",
+    "skill_question.answered_wrong": "UNWIRED 2026-11-26 — no live producer",
     "notification.winner_selected": "This is the consumer, not a producer — it records that delivery was attempted",
     # Deferred producers: classified must-emit, but blocked. Emitting ahead of a
     # consumer dead-letters on the first attempt (outbox/worker.py), so each

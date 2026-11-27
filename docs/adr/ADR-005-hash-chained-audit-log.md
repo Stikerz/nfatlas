@@ -107,3 +107,27 @@ The audit log is exportable to JSONL (per draw, per user, or full) via an operat
 - Every event in the catalogue (`docs/compliance/audit-log-spec.md`) must appear in `audit_log` for the relevant subject. Missing events are CI-flagged via integration tests that exercise the trigger paths.
 - Nightly chain-verification job is operational from Phase 2.
 - Compliance & Risk Agent verifies the chain over a draw's events before a winner is announced publicly.
+
+
+---
+
+## Amendment (2026-11-27) — event catalogue updated; retention rule made explicit
+
+**Proposed by:** 🏗️ Winston · **Approver:** S1408661 (EL)
+**Status of base decision:** unchanged. Hash chaining, row-hash construction, append-only storage and verification all stand.
+
+### Event catalogue
+
+- `ticket.issued` — the base text reads *"every paid or free-entry ticket"*. The free-entry route was removed 2026-11-23 (AMEND-001), so no new free-entry tickets are issued. **Historical `ticket.issued` events with `entry_source='free'` remain in the chain and are valid.**
+- `ticket.free_transcribed` — no live producer since 2026-11-23. Retained in the ADR-002 outbox allowlist with that status recorded rather than deleted.
+- `skill_question.issued` / `.answered_correct` / `.answered_wrong` — no live producer since 2026-11-26 (AMEND-003). Historical events remain in the chain.
+- `self_exclusion.activated` — **added 2026-11-24** (ADR-010 Phase A). Payload carries `bvn_enforced: false` so Phase A rows are distinguishable from Phase B rows without inspecting the registry for NULLs.
+- `self_exclusion.match` — specified by ADR-010 for the Phase B KYC lookup. **Not yet emitted**; blocked on ADR-007.
+
+### Retention rule — new, and load-bearing
+
+**Tables referenced by audit-log `subject_id` values must never be dropped, even when the feature that wrote them is removed.** This now explicitly covers `free_entry_slips`, `skill_questions`, `skill_question_options` and `skill_question_attempts`, and the `'free'` member of the `tickets.entry_source` CHECK constraint.
+
+Dropping any of them would orphan chain entries and, for draws already revealed, falsify the paid/free split published in the commit-reveal proof. **A published proof must never be rewritten.**
+
+This rule was applied in practice before it was written down — both feature removals unwired code and left the schema intact. Recording it here so the next person removing a feature does not have to re-derive it, and so "it is dead code, drop the table" is answerable by citation.
