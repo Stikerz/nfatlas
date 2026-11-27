@@ -1517,6 +1517,82 @@ notes: |
 ---
 
 
+### 2026-11-27 — Winston + John scope prize photography
+
+```yaml
+---
+ts: 2026-11-27T19:30:00Z
+agent: bmad-agent-architect (Winston) + bmad-agent-pm (John)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/prize-photography-scope.md (new)
+operation: created
+inputs:
+  - design/wireframes/16-draws-carousel.md §4.1 and the spike evaluation
+  - ADR-001 §Decision + §V0.5 amendment; ADR-005 §Alternatives; ADR-007 §Adapters
+  - PRD §2; delivery-framework §Phase 0 (amended 2026-11-27)
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    Four decisions in §5. Nothing proposed for build until they are made.
+notes: |
+  THE FINDING THAT REFRAMED IT. Atlas has already decided its object
+  storage three times and provisioned it zero times. ADR-001 §Decision
+  commits to "S3-compatible storage" as part of the managed-platform
+  stack; ADR-007 §Adapters puts KYC document images in S3 "under strict
+  access control"; ADR-005 §Alternatives names S3-with-object-lock for
+  audit-log export. ADR-001's V0.5 amendment records why none exists:
+  storage was stubbed because KYC was deferred.
+
+  So prize photography is not a new storage decision. It is the THIRD
+  caller for a facility already chosen and never stood up — and the first
+  with a demonstrated product reason to stand it up. That argues for it,
+  not against.
+
+  THE DESIGN POINT WINSTON WOULD NOT WANT LOST. Prize images and KYC
+  documents must not share a bucket or a policy. KYC: one operator, strict
+  time-limited logged access, contains a face and an ID, NDPA retention
+  rules. Prize images: every visitor, logged out, CDN-cacheable, no PII,
+  delete when the draw archives. One policy gets one of them wrong, and
+  the expensive direction is making KYC documents public. Two buckets from
+  the first line of Terraform, not as a later refinement.
+
+  THE URL COLUMN IS THE WRONG SHAPE TO SHIP. It trusts whatever is pasted:
+  availability becomes a third party's, nothing validates content type,
+  dimensions or size, and an operator pasting http:// is invisible to the
+  app. Winston would accept it for INTERNAL DEMOS with Atlas-controlled
+  assets, never in front of real users.
+
+  JOHN'S SCOPE POSITION. PRD §2 does not mention prize imagery anywhere —
+  not in scope, not in the draw-configuration bullet, not as a cut item.
+  It was never considered, which is how a text-only card got built
+  contradicting the tone doc. That makes this a PRD AMENDMENT, not a
+  defect fix; "the tone doc implies it" is not authority to add scope. His
+  position: yes to V1, close to table stakes for the category — but the
+  real risk is the unowned row in the cost table. Somebody must photograph
+  a Corolla for every draw, forever, and that recurring content obligation
+  has not been costed.
+
+  TIMING IS DOWNSTREAM OF THE LICENCE, indirectly. Object storage needs
+  the managed-platform choice, deferred in the V0.5 demo-first pivot;
+  ADR-001 puts that choice in Phase 0; Phase 0 is now gated on the State
+  gaming licence. Not because photography is legally sensitive — because
+  it needs infrastructure that needs a platform that needs Phase 0 to
+  close.
+
+  RECOMMENDATION: do it, but not yet and not in that order. Two things
+  that cost nothing now — John raises the PRD amendment so the requirement
+  is recorded rather than living in a wireframe footnote, and Tobi adds
+  the two-bucket split to the platform-selection criteria so that decision
+  is made once, correctly, whenever it is finally made. What NOT to do:
+  ship the URL column to real users to get photography sooner.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
