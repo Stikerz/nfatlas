@@ -226,6 +226,7 @@ final _draw3 = DrawSummary(
 /// real UI change still shows up as an image diff in the pull request once the
 /// author regenerates. Running them in CI at all is what catches the failure
 /// that actually matters: a screen that throws or renders empty.
+
 class _TolerantComparator extends LocalFileComparator {
   _TolerantComparator(super.testFile, {required this.tolerance});
 

@@ -30,6 +30,7 @@ class DrawSummary {
   const DrawSummary({
     required this.id,
     required this.prizeCopy,
+    this.prizeImageUrl,
     required this.ticketPriceMinor,
     required this.currency,
     required this.closeTime,
@@ -42,6 +43,7 @@ class DrawSummary {
     return DrawSummary(
       id: json['id'] as String,
       prizeCopy: json['prize_copy'] as String,
+      prizeImageUrl: json['prize_image_url'] as String?,
       ticketPriceMinor: json['ticket_price_minor'] as int,
       currency: json['currency'] as String,
       closeTime: DateTime.parse(json['close_time'] as String),
@@ -53,6 +55,11 @@ class DrawSummary {
 
   final String id;
   final String prizeCopy;
+
+  /// Nullable by design: draws created before 2026-11-27 have none, and a
+  /// draw without one must still render. The card falls back to the
+  /// text-only treatment rather than showing a broken frame.
+  final String? prizeImageUrl;
   final int ticketPriceMinor;
   final String currency;
   final DateTime closeTime;

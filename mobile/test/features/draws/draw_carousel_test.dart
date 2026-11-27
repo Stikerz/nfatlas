@@ -181,6 +181,8 @@ void main() {
     expect(find.text(_soonest.prizeCopy), findsOneWidget);
   });
 
+  _prizeImageTests();
+
   testWidgets('empty state survives', (tester) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1.0;
@@ -190,5 +192,53 @@ void main() {
     await _openDrawsTab(tester);
 
     expect(find.text('No draws right now'), findsOneWidget);
+  });
+}
+
+/// Prize photography (spike, 2026-11-27 — wireframe 16 §4.1).
+///
+/// Goldens cannot exercise this: Flutter's test HTTP client returns a 1x1
+/// transparent image for every request, so a golden of a photo-led card
+/// shows an empty frame and proves nothing. These assert the BEHAVIOUR
+/// instead — that the image widget appears when a URL is present and that
+/// a draw without one still renders its card rather than a broken frame.
+/// The visual evidence is the live simulator capture in wireframe 16.
+void _prizeImageTests() {
+  testWidgets('a draw with a photo renders an image', (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final withPhoto = DrawSummary(
+      id: 'draw-photo',
+      prizeCopy: 'Win a Toyota Corolla 2026, insured and delivered.',
+      prizeImageUrl: 'https://picsum.photos/seed/atlas-car/1280/800',
+      ticketPriceMinor: 25000,
+      currency: 'NGN',
+      closeTime: DateTime.utc(2026, 12, 1, 12),
+      drawTime: DateTime.utc(2026, 12, 1, 13),
+      state: 'sales_open',
+      commitment: _soonest.commitment,
+    );
+
+    await tester.pumpWidget(_host([withPhoto]));
+    await _openDrawsTab(tester);
+
+    expect(find.byType(Image), findsWidgets);
+    expect(find.text(withPhoto.prizeCopy), findsOneWidget);
+  });
+
+  testWidgets('a draw without a photo still renders its card', (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // The text-only card IS the fallback. A missing photo must never
+    // produce a broken-image glyph or an empty card.
+    await tester.pumpWidget(_host([_soonest]));
+    await _openDrawsTab(tester);
+
+    expect(find.text(_soonest.prizeCopy), findsOneWidget);
+    expect(find.text('TAP TO ENTER →'), findsOneWidget);
   });
 }

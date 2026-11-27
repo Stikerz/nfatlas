@@ -1517,6 +1517,79 @@ notes: |
 ---
 
 
+### 2026-11-27 — SPIKE: prize photography evaluated against the live app
+
+```yaml
+---
+ts: 2026-11-27T18:30:00Z
+agent: bmad-agent-dev (Amelia) + bmad-agent-ux-designer (Sally)
+session: claude-code
+artefact:
+  - backend/migrations/versions/20261127_0900_0013_prize_image.py (SPIKE)
+  - atlas.draw.{models,schemas,routes,service}
+  - mobile/lib/features/draws/draws_api.dart
+  - mobile/lib/features/home/home_screen.dart (_PrizeImage)
+  - _bmad-output/planning-artifacts/design/wireframes/16-draws-carousel.md §4.1
+operation: created
+inputs:
+  - wireframe 16 §4.1; tone-doc Anchor 1
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    SPIKE on branch spike/prize-photography, not proposed for merge as-is.
+    Adds a DB column, which is an AINE-AGENTS §6 gate before staging.
+notes: |
+  Wireframe 16 §4.1 called the absence of prize photography the largest gap
+  between the tone doc and what ships. Spiked to find out whether closing it
+  actually helps before committing to the feature.
+
+  IT WORKS, AND IT IS TRANSFORMATIVE. Driven on an iOS simulator against the
+  live backend with free Lorem Picsum images. The card goes from about a
+  third of the viewport to filling it; the §3.3 dead space disappears
+  entirely; and the warm off-white surface sits against photographic tone
+  rather than fighting it. The "spreadsheet" problem is solved, not
+  mitigated.
+
+  BOTH PATHS VERIFIED LIVE, not inferred. A draw with a URL renders a
+  full-bleed 16:10 cover-fit photograph with the card's rounded corners
+  clipped. A draw without one falls back to the text-only card — no
+  broken-image glyph, no empty frame. The first run happened to have a
+  leftover image-less draw first in close_time order, which demonstrated
+  the fallback by accident before I demonstrated it on purpose.
+
+  CAVEATS, so the screenshot is not mistaken for a finished feature:
+  Picsum returns random landscapes, not the prize — this proves the
+  TREATMENT, not content fit, and real photography is an operations problem.
+  No cacheWidth/cacheHeight, so a 1280x800 JPEG decodes at full size for a
+  card a third that wide; across a carousel that is real memory on low-end
+  Android. Cover-fit crops whatever ratio is supplied, so prizes will be
+  beheaded without a stated aspect. A bare URL column trusts whatever is
+  pasted and a third-party host going down takes the imagery with it —
+  production needs upload and hosting Atlas controls.
+
+  TESTING LIMITATION FOUND AND RECORDED. Goldens cannot evidence network
+  images: Flutter's test HTTP client returns a 1x1 transparent image, so a
+  photo-led golden shows an empty frame. I built an HttpOverrides harness to
+  serve real fixture bytes, it did not decode inside the test's fake-async
+  clock, and I removed it rather than leave ninety lines of non-working
+  scaffolding behind. The committed golden honestly shows the text-only
+  fallback; behaviour is asserted in draw_carousel_test.dart and the visual
+  evidence is the simulator capture.
+
+  SPIKE HYGIENE. Reaching the Draws tab needed main.dart routed straight to
+  HomeScreen with the tab index forced to 1, because osascript has no
+  accessibility permission to tap. Both hacks were reverted and verified
+  absent before committing.
+
+  VERIFICATION: 52/52 mobile (50 -> 52), 268/268 backend, 5/5 admin;
+  analyze, make lint, make typecheck all green.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
