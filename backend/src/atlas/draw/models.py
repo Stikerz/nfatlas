@@ -46,6 +46,9 @@ class Draw(Base):
         server_default=text("gen_random_uuid()"),
     )
     prize_copy: Mapped[str] = mapped_column(String, nullable=False)
+    # Nullable: pre-existing draws have none, and the card must still
+    # render without one. SPIKE — see migration 0013.
+    prize_image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     ticket_price_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     currency: Mapped[str] = mapped_column(
         String, nullable=False, server_default=text("'NGN'")

@@ -1531,10 +1531,27 @@ inputs:
   - design/wireframes/16-draws-carousel.md §4.1 and the spike evaluation
   - ADR-001 §Decision + §V0.5 amendment; ADR-005 §Alternatives; ADR-007 §Adapters
   - PRD §2; delivery-framework §Phase 0 (amended 2026-11-27)
+### 2026-11-27 — SPIKE: prize photography evaluated against the live app
+
+```yaml
+---
+ts: 2026-11-27T18:30:00Z
+agent: bmad-agent-dev (Amelia) + bmad-agent-ux-designer (Sally)
+session: claude-code
+artefact:
+  - backend/migrations/versions/20261127_0900_0013_prize_image.py (SPIKE)
+  - atlas.draw.{models,schemas,routes,service}
+  - mobile/lib/features/draws/draws_api.dart
+  - mobile/lib/features/home/home_screen.dart (_PrizeImage)
+  - _bmad-output/planning-artifacts/design/wireframes/16-draws-carousel.md §4.1
+operation: created
+inputs:
+  - wireframe 16 §4.1; tone-doc Anchor 1
 human_review:
   reviewer: S1408661 (Founder / EL)
   status: not-yet-reviewed
   comments: |
+<<<<<<< HEAD
     Four decisions in §5. Nothing proposed for build until they are made.
 notes: |
   THE FINDING THAT REFRAMED IT. Atlas has already decided its object
@@ -1729,6 +1746,123 @@ notes: |
   — hashing on upload is trivial while the endpoint is being written and
   awkward afterwards, and no backfill can hash images for draws that have
   already closed. Deciding late costs permanently unverifiable history.
+=======
+    SPIKE on branch spike/prize-photography, not proposed for merge as-is.
+    Adds a DB column, which is an AINE-AGENTS §6 gate before staging.
+notes: |
+  Wireframe 16 §4.1 called the absence of prize photography the largest gap
+  between the tone doc and what ships. Spiked to find out whether closing it
+  actually helps before committing to the feature.
+
+  IT WORKS, AND IT IS TRANSFORMATIVE. Driven on an iOS simulator against the
+  live backend with free Lorem Picsum images. The card goes from about a
+  third of the viewport to filling it; the §3.3 dead space disappears
+  entirely; and the warm off-white surface sits against photographic tone
+  rather than fighting it. The "spreadsheet" problem is solved, not
+  mitigated.
+
+  BOTH PATHS VERIFIED LIVE, not inferred. A draw with a URL renders a
+  full-bleed 16:10 cover-fit photograph with the card's rounded corners
+  clipped. A draw without one falls back to the text-only card — no
+  broken-image glyph, no empty frame. The first run happened to have a
+  leftover image-less draw first in close_time order, which demonstrated
+  the fallback by accident before I demonstrated it on purpose.
+
+  CAVEATS, so the screenshot is not mistaken for a finished feature:
+  Picsum returns random landscapes, not the prize — this proves the
+  TREATMENT, not content fit, and real photography is an operations problem.
+  No cacheWidth/cacheHeight, so a 1280x800 JPEG decodes at full size for a
+  card a third that wide; across a carousel that is real memory on low-end
+  Android. Cover-fit crops whatever ratio is supplied, so prizes will be
+  beheaded without a stated aspect. A bare URL column trusts whatever is
+  pasted and a third-party host going down takes the imagery with it —
+  production needs upload and hosting Atlas controls.
+
+  TESTING LIMITATION FOUND AND RECORDED. Goldens cannot evidence network
+  images: Flutter's test HTTP client returns a 1x1 transparent image, so a
+  photo-led golden shows an empty frame. I built an HttpOverrides harness to
+  serve real fixture bytes, it did not decode inside the test's fake-async
+  clock, and I removed it rather than leave ninety lines of non-working
+  scaffolding behind. The committed golden honestly shows the text-only
+  fallback; behaviour is asserted in draw_carousel_test.dart and the visual
+  evidence is the simulator capture.
+
+  SPIKE HYGIENE. Reaching the Draws tab needed main.dart routed straight to
+  HomeScreen with the tab index forced to 1, because osascript has no
+  accessibility permission to tap. Both hacks were reverted and verified
+  absent before committing.
+
+  VERIFICATION: 52/52 mobile (50 -> 52), 268/268 backend, 5/5 admin;
+  analyze, make lint, make typecheck all green.
+>>>>>>> spike/prize-photography
+---
+```
+
+---
+
+
+### 2026-11-27 — VISUAL-WALKTHROUGH refreshed with a live mobile capture
+
+```yaml
+---
+ts: 2026-11-27T19:45:00Z
+agent: bmad-agent-dev (Amelia) + bmad-agent-tech-writer (Paige)
+session: claude-code
+artefact:
+  - docs/VISUAL-WALKTHROUGH.md
+  - docs/screens/mobile-draws-carousel-{1,2,3}.png (new)
+  - docs/screens/draws-walkthrough.mp4 (new)
+  - mobile/integration_test/walkthrough_test.dart (new)
+  - mobile/pubspec.yaml (integration_test dev dependency)
+operation: created + amended
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+notes: |
+  BROKEN REFERENCE FIXED — my own. AMEND-003 renamed the skill-question
+  golden to entry-purchase and I never updated VISUAL-WALKTHROUGH, so it
+  has carried a dead image link since 2026-11-26. Its surrounding copy was
+  worse than dead: it told readers the skill question "is the mechanism
+  that makes Atlas a prize competition rather than a lottery", which is no
+  longer Atlas's position at all. Replaced with the entry-purchase screen
+  and a note pointing at PRD §1.
+
+  LIVE CAPTURE ADDED. Everything in the mobile section was previously a
+  golden — one screen, rendered headlessly. The new section is an iOS
+  simulator running the real app against the real backend, driven by a new
+  integration_test harness and recorded while it ran: four seeded draws,
+  live countdowns, live commitment hashes, real prize photography loaded
+  over the network. Three stills plus a 0.9MB H.264 video.
+
+  THE REQUEST WAS FOR A SIGN-IN, AND THERE IS NO SIGN-IN. Trying to record
+  one surfaced it: identityApi.login is called in exactly one place, at the
+  end of registration (identity_controller.submitPassword), and the
+  "Already have an account? Sign in" text on the registration screen has NO
+  tap handler. A returning user whose 8-hour session has lapsed has no
+  route back into their account. Recorded in the walkthrough as a gap
+  rather than worked around.
+
+  Registration could not be driven either: date of birth is a Material
+  showDatePicker behind a tap target, not a text field, and the dialog did
+  not open under the harness. Rather than keep fighting it, the harness was
+  narrowed to the carousel — which is the substance of what was asked
+  ("seeing multiple test prizes") — and the sign-in gap reported.
+
+  HONESTY CAVEATS WRITTEN INTO THE DOC, not just the commit. The
+  photography is NOT on main: it lives on spike/prize-photography,
+  deliberately unmerged because it adds a DB column and a bare URL column
+  trusts whatever an operator pastes. The images are Lorem Picsum
+  placeholders proving the TREATMENT, not content fit. The capture harness
+  reaches the Draws tab by temporarily routing past the splash router; that
+  hack is reverted and absent from shipped code, and the doc says so.
+
+  Also wasted a cycle recording against main before noticing main has the
+  carousel but not the photography — the spike was never merged. Caught by
+  the harness asserting find.byType(Image) found zero, which is exactly why
+  a capture harness should assert rather than just record.
+
+  VERIFICATION: 52/52 mobile, 268/268 backend, 5/5 admin; analyze and lint
+  green. Every image and video reference in the walkthrough resolves.
 ---
 ```
 

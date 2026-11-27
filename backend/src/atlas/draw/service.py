@@ -66,6 +66,7 @@ async def create_draw(
     *,
     prize_copy: str,
     ticket_price_minor: int,
+    prize_image_url: str | None = None,
     close_time: datetime,
     draw_time: datetime,
     entries_cap: int | None = None,
@@ -89,6 +90,7 @@ async def create_draw(
     draw = Draw(
         id=draw_id,
         prize_copy=prize_copy,
+        prize_image_url=prize_image_url,
         ticket_price_minor=ticket_price_minor,
         currency="NGN",
         entries_cap=entries_cap,

@@ -43,6 +43,7 @@ def _to_summary(row: Draw) -> DrawSummary:
     return DrawSummary(
         id=row.id,
         prize_copy=row.prize_copy,
+        prize_image_url=row.prize_image_url,
         ticket_price_minor=row.ticket_price_minor,
         currency=row.currency,
         close_time=row.close_time,
@@ -78,6 +79,7 @@ async def create_draw(
     row = await draw_service.create_draw(
         db,
         prize_copy=body.prize_copy,
+        prize_image_url=body.prize_image_url,
         ticket_price_minor=body.ticket_price_minor,
         close_time=body.close_time,
         draw_time=body.draw_time,

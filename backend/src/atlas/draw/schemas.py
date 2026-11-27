@@ -13,6 +13,7 @@ class DrawSummary(BaseModel):
 
     id: uuid.UUID
     prize_copy: str
+    prize_image_url: str | None = None
     ticket_price_minor: int
     currency: str
     close_time: datetime
@@ -31,6 +32,7 @@ class CreateDrawRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     prize_copy: str = Field(min_length=1, max_length=500)
+    prize_image_url: str | None = Field(default=None, max_length=2000)
     ticket_price_minor: int = Field(gt=0)
     close_time: datetime
     draw_time: datetime
