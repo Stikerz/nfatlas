@@ -1360,6 +1360,80 @@ notes: |
 ---
 
 
+### 2026-11-27 — Draws tab: swipeable carousel for concurrent draws
+
+```yaml
+---
+ts: 2026-11-27T17:00:00Z
+agent: bmad-agent-dev (Amelia)
+session: claude-code
+artefact:
+  - mobile/lib/features/home/home_screen.dart (_DrawCarousel)
+  - mobile/test/features/draws/draw_carousel_test.dart (new, 7 tests)
+  - mobile/test/design/screen_goldens_test.dart + goldens/draws-carousel.png
+operation: created
+inputs:
+  - PRD.md §2 "Browse currently active draws" (plural — already in scope)
+human_review:
+  reviewer: Sally (bmad-agent-ux-designer) — not yet reviewed
+  status: not-yet-reviewed
+  comments: |
+    UI-only. No schema, no API, no spec amendment: the backend already
+    returned a list and the PRD already said "draws". Sally should see the
+    carousel treatment since no wireframe covers it.
+notes: |
+  SCOPE CHECK FIRST. The founder asked for swipe-browsing of concurrent
+  draws, not multiple prizes within one draw. Those are very different:
+  multi-prize would need a prizes table, a prize_id on draw_winners, and an
+  ADR-006 amendment because select_winners returns [primary, reserves] and
+  changing that changes what a published proof asserts. Swipe-browsing is
+  UI-only — GET /api/v1/draws already returns every sales_open draw with no
+  cap, ordered by close_time ascending, and PRD §2 already says "Browse
+  currently active draws", plural. Nothing to amend.
+
+  WHAT CHANGED. The Draws tab was a vertical ListView; it is now a
+  PageView carousel with viewportFraction 0.88 so the next card peeks —
+  without that a carousel reads as a single static card and nobody swipes.
+
+  ACCESSIBILITY DRIVEN THE DESIGN, not decorated it. A swipe-only surface
+  hides inventory from anyone who cannot perform a horizontal drag, so:
+  the page-indicator dots are real controls with 44pt touch targets and
+  Semantics labels ("Go to draw 3 of 3"), and each page announces its
+  position ("Draw 1 of 3") because a bare PageView gives a screen reader
+  no signal that more draws exist. With one draw the indicator and the
+  count are hidden entirely — dots that cannot move are noise, and
+  "1 draws open" is wrong anyway.
+
+  TESTS: 7, including the ordering contract (first page is the draw
+  closing soonest, matching the backend's order_by close_time) and the
+  single-draw and empty cases. Mutation-checked: setting the dots'
+  onTap to null fails exactly one test — "every draw is reachable WITHOUT
+  swiping" — and nothing else. The test guards the claim it names.
+
+  GOLDEN ADDED AND INSPECTED, not merely passed: three draws, the count,
+  the peeking second card, the elongated active dot.
+
+  FINDING SURFACED BY LOOKING AT THE GOLDEN — pre-existing, NOT fixed
+  here. _DrawCard derives its close label from close_time but its enter
+  affordance from state, so a draw past close_time whose state is still
+  sales_open renders "closed" AND "TAP TO ENTER" together. The backend
+  agrees with the CTA (it accepts purchases while state is sales_open),
+  so this is a labelling inconsistency during the window between
+  close_time passing and the operator closing the draw. Left alone
+  deliberately: it predates this change, it is not a carousel concern, and
+  "should a past-close draw still be enterable" is a product question.
+  Flagged for Sally and the founder.
+
+  VERIFICATION: 50/50 mobile (43 -> 50), 268/268 backend, 5/5 admin;
+  flutter analyze, make lint all green. Also exercised live — three
+  concurrent draws seeded through the admin API and confirmed returned in
+  close_time order by GET /api/v1/draws.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
