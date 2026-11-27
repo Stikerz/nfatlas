@@ -6,8 +6,16 @@ import 'session_storage.dart';
 
 /// Base URL for the Atlas backend as reachable from the device/simulator.
 ///
-/// - iOS simulator, Android emulator + Chrome dev: `http://localhost:8000`
-///   works because the compose backend exposes 8000 on the host.
+/// - iOS simulator + Android emulator: `http://localhost:8000` works
+///   because the compose backend exposes 8000 on the host. Verified on an
+///   iOS 26.5 simulator 2026-11-27.
+/// - **Chrome / Flutter web does NOT work**, despite what this comment
+///   claimed until 2026-11-27. The backend registers no CORS middleware,
+///   so a browser-hosted build is blocked at preflight: `OPTIONS
+///   /api/v1/draws` returns 405 and no `Access-Control-Allow-Origin`
+///   header is sent. Running the app in a browser against a local backend
+///   needs CORS middleware added server-side (Tobi's call — it is
+///   security-relevant config, not a dev convenience).
 /// - Physical devices need the host machine's LAN IP; override via
 ///   `--dart-define=ATLAS_API_BASE_URL=http://192.168.x.x:8000`.
 const _defaultBaseUrl = String.fromEnvironment(

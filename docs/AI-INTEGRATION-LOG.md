@@ -1226,6 +1226,77 @@ notes: |
 ---
 
 
+### 2026-11-27 — Flutter app driven on a simulator; REVIEW-004
+
+```yaml
+---
+ts: 2026-11-27T11:30:00Z
+agent: bmad-agent-dev (Amelia) + atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - docs/compliance/reviews/REVIEW-004-closed-account-login-message.md (new)
+  - mobile/lib/services/api_client.dart (docstring correction)
+operation: reviewed + amended
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+notes: |
+  CLOSED THE GAP NAMED YESTERDAY. The Flutter app had been verified only
+  by analyze and widget/golden tests. It has now been built for iOS and
+  launched on a booted iPhone 17 Pro simulator (iOS 26.5) against the live
+  backend; a screenshot confirms the registration screen renders — a real
+  launch, not a blank frame. The regenerated entry-purchase golden was
+  also inspected rather than trusted: prize copy, "One entry", correct
+  ₦500 formatting from 50000 minor units, the non-refundable disclosure
+  and the "Pay ₦500 and enter" action all render, with no skill question
+  anywhere.
+
+  NOT FULLY DRIVEN, AND WHY. Automating the simulator UI to reach
+  EntryPurchaseScreen needs accessibility permission for osascript, which
+  macOS refuses (-1719) and which is a system privacy setting I declined
+  to change on the founder's machine to serve a test. idb is not
+  installed. So the screen is verified by golden render plus direct API
+  exercise, not by a tap-through. The gap is narrower than yesterday, not
+  closed.
+
+  NEW FINDING — api_client docstring was wrong. It claimed
+  "iOS simulator, Android emulator + Chrome dev: http://localhost:8000
+  works". Chrome does NOT work: the backend registers no CORS middleware,
+  and a live probe returned OPTIONS 405 with no Access-Control-Allow-Origin
+  header, so any browser-hosted build is blocked at preflight. Corrected,
+  and the remedy flagged as Tobi's — CORS allowed-origins is
+  security-relevant config, not a dev convenience, and I would not add it
+  merely to make my own verification pass. Flutter web DOES build
+  successfully; it just cannot reach the API from a browser.
+
+  REVIEW-004 (Adaeze) — approved the closed-account login message. She
+  recorded that she had missed it herself in REVIEW-002 Addendum B:
+  she verified login was REFUSED but not what the refused user was TOLD,
+  and those are different questions. Her note on why it matters: a person
+  returning after self-excluding, often at the point of weakest resolve,
+  was told their password was wrong — predictably prompting a retry, a
+  reset, or a support contact, three further touchpoints with a platform
+  they asked to be shut out of. The control worked; the communication
+  undermined it.
+
+  She also notes the disclosure risk the fix had to avoid: exclusion
+  status indicates a user's relationship with gambling harm and is
+  plausibly NDPA special-category data (counsel Q4), so the closed-account
+  message is gated behind the password check and a test asserts the
+  non-disclosure.
+
+  STANDING REQUIREMENT EXTENDED. Addendum A.4 required code plus a test
+  behind every claim. Adaeze extends it: where an ADR specifies what a
+  user is TOLD, the assertion must cover the message, not merely the
+  outcome. Fourth defect this month in the same family — a documented
+  behaviour the system did not exhibit — but the first where the ADR was
+  right and the implementation drifted, rather than copy overclaiming.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
