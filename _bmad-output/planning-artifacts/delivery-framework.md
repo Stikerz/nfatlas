@@ -21,7 +21,7 @@ V1 is a **modular monolith** with **6 business modules** delivered in a **26-wee
 
 | Phase | Name | Weeks | Wall-clock | Primary AINE owners | Gate to advance |
 |---|---|---|---|---|---|
-| 0 | Foundations & legal | 0–4 | 4 wks | PM, Compliance & Risk, DevSecOps | NLRC legal opinion commissioned + vendors shortlisted + local infra baseline |
+| 0 | Foundations & legal | 0–4 | 4 wks | PM, Compliance & Risk, DevSecOps | **State gaming licence application submitted** + counsel Q7/Q1 answered + vendors shortlisted + local infra baseline |
 | 1 | Specification | 4–6 | 2 wks | PM, Solution Architect, QA | ADRs approved, stories generated for Phase 2 build, test strategy signed off |
 | **2** | **Local platform + V0.5 investor demo** | **6–13** | **7 wks** | Sally (UX design pass), Amelia (build), Tobi (Docker Compose) | V0.5 demo runs end-to-end on a clean laptop; founder walks it 20+ times; see `v0.5-demo-plan.md §6` gates |
 | 3 | Real-launch module completion (closed beta) | 13–19 | 6 wks | Backend, Frontend, QA, Compliance | All V0.5 stubs replaced with real integrations; full RBAC; real KYC vendor; real payment webhook + reconciliation; refund + prize fulfilment; one real-money beta draw end-to-end |
@@ -46,15 +46,17 @@ Nothing about the build can be planned reliably until five things are settled. P
 
 ### Activities
 
-1. **Legal opinion on the prize-competition model in Nigeria** — Compliance & Risk Agent commissions, Founder + Legal Counsel approve. Written opinion from Nigerian gambling/promotions counsel covering: (a) does the model require an NLRC licence/permit, (b) free-entry route requirements under Nigerian law, (c) skill-question requirements under Nigerian law, (d) restrictions on marketing language. **Hard prerequisite for Phase 1 to start.**
+1. **Legal opinion on which State regime governs, and what licence it requires** — Compliance & Risk Agent commissions, Founder + Legal Counsel approve. Written opinion from Nigerian **gaming** counsel covering: (a) which State's law governs an online operator serving users nationwide (Q7), (b) under it, is Atlas licensable and at what cost and timeline (Q1), (c) whether a proportionate promotional permit exists as an alternative to a full gaming licence (Q7.4), (d) restrictions on marketing language, **including whether advertising an unlicensed scheme is itself an offence** (Q5). **Hard prerequisite for Phase 1 to start.**
+
+   > **Rewritten 2026-11-27.** The 2026-07-01 version asked whether the model needs an NLRC licence and what the free-entry and skill-question requirements are. The NLRC has held no national licensing authority since *AG Lagos v AG Federation* (SC/1/2008), and Atlas removed both mechanics (2026-11-23, 2026-11-26) — so two of its four sub-questions were about features that no longer exist, asked of a regulator that no longer licenses.
 2. **Vendor selection.** Compliance & Risk Agent shortlists, Founder approves: KYC vendor (Smile / Dojah / Prembly), Paystack merchant onboarding, WhatsApp Business API provider, managed-platform host (Fly / Railway / Render / AWS App Runner), Sentry, S3-compatible object storage.
 3. **Infrastructure baseline.** DevSecOps Agent provisions: GitHub org + repo, managed-platform account, Postgres (dev + staging), Redis, S3 bucket, secrets management, DNS, one-command local dev (Docker Compose), GitHub Actions baseline CI (lint + build).
-4. **Free-entry route operationalised.** Compliance & Risk Agent designs the workflow: P.O. box leased, entry slip template, transcription procedure, throughput target for V1 launch volumes.
+4. ~~**Free-entry route operationalised.** P.O. box leased, entry slip template, transcription procedure, throughput target.~~ **Struck 2026-11-23** — the route was removed and was never operable (R-FREE-01: no P.O. box was ever leased). Not a Phase 0 deliverable.
 5. **Schema kickoff.** Solution Architect Agent drafts initial ADRs for: outbox vs Redis Streams (decision: outbox in V1), monolith deployment topology, secret management, observability stack, audit log strategy.
 
 ### Deliverables
 
-- `docs/compliance/legal-opinion-nlrc.md` — written summary + scanned PDF reference (PDF not in repo).
+- `docs/compliance/legal-opinion-state-gaming.md` — written summary + scanned PDF reference (PDF not in repo). *(Renamed from `legal-opinion-nlrc.md` 2026-11-27 — the opinion is about State law, not the NLRC.)*
 - `docs/compliance/vendor-decisions.md` — shortlist comparison + decision rationale per vendor.
 - `docs/risk-register.md` — risks identified during Phase 0 with owner + mitigation per risk.
 - `docs/adr/ADR-001..00N-*.md` — kickoff ADRs (see Phase 1 for full ADR set).
@@ -118,8 +120,8 @@ Two weeks where engineering agents specify everything Phase 2 and Phase 3 will i
 - Engineering standards in `docs/engineering-standards.md` (linting, typing, naming).
 
 #### Compliance & Risk Agent
-- Skill-question content set v1 in `docs/compliance/skill-questions.md`. Reviewed by Legal Counsel.
-- Free-entry route copy block in `docs/compliance/copy/free-entry-route.md`. Reviewed by Legal Counsel.
+- ~~Skill-question content set v1 in `docs/compliance/skill-questions.md`.~~ **Struck 2026-11-26** — no skill question; the artefact is cancelled, not outstanding.
+- ~~Free-entry route copy block in `docs/compliance/copy/free-entry-route.md`.~~ **Struck 2026-11-23** — no free route.
 - Audit-log specification in `docs/compliance/audit-log-spec.md`.
 
 ### Phase 1 exit criteria
@@ -128,7 +130,7 @@ Two weeks where engineering agents specify everything Phase 2 and Phase 3 will i
 - ✅ All Phase 2/3 stories in `ready` state, with technical context from Architect attached.
 - ✅ KPI targets committed (no TODOs in PRD §5).
 - ✅ Test strategy signed off by EL.
-- ✅ Skill-question content set + free-entry copy approved by Legal Counsel.
+- ~~Skill-question content set + free-entry copy approved by Legal Counsel.~~ **Struck 2026-11-27** — both artefacts cancelled. Replaced by: **consumer copy asserts no regulatory classification** (REVIEW-001 §2.1), and **every claim about a control has code and a test behind it** (REVIEW-002 Addendum A.4, extended by REVIEW-004 to cover what the user is *told*).
 
 ---
 
@@ -257,7 +259,7 @@ Identity ──► Wallet & Ledger ──► Payment ──► Ticket ──► 
 - **Identity** (weeks 9–10) — registration, OTP, login, MFA, KYC adapter, self-exclusion. Mobile + admin login flows.
 - **Wallet & Ledger** (weeks 10–11) — chart of accounts, journal entries, balance queries, reconciliation job skeleton. **Two-approval gate enforced from first commit** (`AINE-AGENTS.md §6`).
 - **Payment** (weeks 11–13) — Paystack inline + bank transfer, idempotency, webhook handler, refund flow, ledger integration. Paystack sandbox only in this phase.
-- **Ticket** (weeks 13–14) — skill question delivery, free-entry transcription, idempotent issuance, ownership history. Mobile purchase flow.
+- **Ticket** (weeks 13–14) — idempotent issuance, ownership history, self-exclusion enforcement at purchase. Mobile purchase flow. *(Skill-question delivery and free-entry transcription struck 2026-11-26 / 2026-11-23.)*
 - **Draw Engine** (weeks 14–16) — commit/sale/close/reveal lifecycle, CSPRNG, public entropy fetcher (drand + Bitcoin block hash), reserve-winner algorithm, replay tooling, hash-chained audit log. **Two-approval gate enforced from first commit.**
 - **Admin** (weeks 9–17 in parallel) — RBAC, draw config, KYC review queue, prize fulfilment state machine, support tickets, refund initiation.
 
@@ -277,7 +279,7 @@ Identity ──► Wallet & Ledger ──► Payment ──► Ticket ──► 
 ### Closed beta milestone (end of week 17)
 
 One real-money draw with a small (~₦100k) cash prize, invited beta users only. Runs end-to-end through every V1 module:
-- Beta users register, complete KYC, deposit, answer skill question, buy paid entries.
+- Beta users register, complete KYC, deposit, buy paid entries. **Gated on the State licence.** *(Skill-question step struck 2026-11-26.)*
 - A small number of free-route postal entries are transcribed and join the same pool.
 - Draw runs through commit/sale/close/reveal with full audit log.
 - Winner notified via WhatsApp + email, claims the prize, payout settles in the ledger.
@@ -316,9 +318,9 @@ Four weeks. Quality work that's been continuous through Phase 3 gets driven to l
 ### Critical journeys covered by E2E (Playwright)
 
 1. New user → register → OTP → KYC submit → KYC approved → login.
-2. Logged-in user → browse active draw → skill question → Paystack sandbox payment → ticket appears.
+2. Logged-in user → browse active draw → Paystack sandbox payment → ticket appears. *(Skill-question step struck 2026-11-26.)*
 3. Operator → create draw (commit) → users buy → close → reveal → winner displayed.
-4. Free-entry route: operator transcribes postal entry → ticket appears in pool → can win.
+4. ~~Free-entry route: operator transcribes postal entry → ticket appears in pool → can win.~~ **Struck 2026-11-23.** Replaced by: **self-exclusion — user closes account → blocked at login and at purchase → cannot enter any draw** (ADR-010 Phase A).
 5. Winner → notification → KYC verify (if not already) → prize claim flow → payout recorded in ledger.
 6. Refund path: operator-initiated refund → Paystack refund → ledger entries balanced.
 7. Failed payment: payment fails at Paystack → no ticket issued → user sees clear error.
@@ -391,7 +393,8 @@ Three weeks. The actual launch.
 **Compliance**
 - [ ] Final legal counsel sign-off on launch copy and prize terms.
 - [ ] T&Cs and privacy policy published and linked from every relevant screen.
-- [ ] Free-entry route documented on every draw page with the exact wording counsel approved.
+- [ ] ~~Free-entry route documented on every draw page with the exact wording counsel approved.~~ **Struck 2026-11-23.**
+- [ ] **State gaming licence held** (not merely applied for), and no public marketing spend before it is.
 - [ ] KYC procedure verified against AML requirements.
 - [ ] Data retention policy in place; right-to-erasure flow tested.
 - [ ] Audit-log export capability tested with a sample draw.
@@ -432,7 +435,7 @@ What's deliberately NOT in V1, with the trigger that moves each item to V2+.
 | Subscriptions / recurring entries | After 3 months of stable V1 operation + cohort retention data |
 | Referral programme | After CAC data from V1 indicates referrals would lower it |
 | Loyalty tiers, cashback, bonus, promo balances | After product proves repeat purchase behaviour |
-| Instant-win games | After regulator sign-off on the model (separate to the prize-competition opinion) |
+| Instant-win games | After the State gaming licence is held, and a separate opinion on instant-win mechanics |
 | Consumer web app (Next.js consumer surface) | When analytics show > 20% of intent-to-purchase coming from non-app sources |
 | Marketing automation, segmentation, lifecycle | After CRM data volume justifies it (proxy: > 10k MAU) |
 | Push notifications + SMS | After mobile MAU > 5k (push), and when transactional volume justifies SMS cost |

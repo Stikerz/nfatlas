@@ -1587,6 +1587,81 @@ notes: |
   the two-bucket split to the platform-selection criteria so that decision
   is made once, correctly, whenever it is finally made. What NOT to do:
   ship the URL column to real users to get photography sooner.
+### 2026-11-27 — delivery-framework, ADR-004, ADR-005 and events.md amended
+
+```yaml
+---
+ts: 2026-11-27T15:00:00Z
+agent: bmad-agent-architect (Winston) + bmad-agent-pm (John)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/delivery-framework.md
+  - docs/adr/ADR-004-idempotency-strategy.md (amendment)
+  - docs/adr/ADR-005-hash-chained-audit-log.md (amendment)
+  - docs/events.md
+  - backend/tools/check_outbox_invariant.py (allowlist notes)
+operation: amended
+inputs:
+  - AMEND-001, AMEND-003 (both applied 2026-11-27)
+  - research/nigerian-draw-classification-research-2026-11-23.md
+human_review:
+  reviewer: S1408661 (Founder / EL) — approved in advance for this follow-up
+  status: approved
+notes: |
+  Closes the three follow-ups AMEND-001 listed and the PRD application
+  deliberately excluded. The licence itself stays with the founder.
+
+  DELIVERY FRAMEWORK. Phase 0's legal deliverable asked whether the model
+  needs an NLRC licence and what the free-entry and skill-question
+  requirements are — two of its four sub-questions were about features
+  that no longer exist, asked of a regulator that has held no national
+  licensing authority since SC/1/2008. Rewritten around counsel Q7/Q1,
+  with Q7.4 (proportionate permit) named. Phase 0 exit, Phase 1 gates,
+  Ticket module scope, beta flows, the smoke-path list and the launch
+  checklist all updated. `legal-opinion-nlrc.md` renamed to
+  `legal-opinion-state-gaming.md`. The launch checklist now requires the
+  licence to be HELD, not merely applied for, and bars marketing spend
+  before it.
+
+  Phase 1's gate "skill-question content set + free-entry copy approved by
+  Legal Counsel" is replaced rather than merely struck: consumer copy
+  asserts no regulatory classification (REVIEW-001 §2.1), and every claim
+  about a control has code and a test behind it (REVIEW-002 Addendum A.4,
+  extended by REVIEW-004 to cover what the user is TOLD).
+
+  ADRs AMENDED, NOT REWRITTEN, per CLAUDE.md. ADR-004: scope list updated
+  — /tickets/free and the skill-answer endpoint removed,
+  /users/me/self-exclude added with its idempotency requirement. The base
+  decision needed no change, which is the outcome an ADR of that kind
+  should have. ADR-005: event catalogue updated, and a RETENTION RULE
+  added that did not previously exist in writing — tables referenced by
+  audit-log subject_id must never be dropped, covering free_entry_slips,
+  the skill_question_* tables and the 'free' enum member. That rule had
+  been applied twice in practice before being recorded; writing it down
+  means "it is dead code, drop the table" is now answerable by citation.
+
+  EVENTS.MD. Three dead producers marked, self_exclusion.activated added.
+  One line had described the free route as "the entry path the legal model
+  depends on" — wrong twice over: the route was never operable (no P.O.
+  box was ever leased) and the research indicates it conferred no
+  protection under the governing State law.
+
+  TWO SELF-CORRECTIONS DURING THIS CHANGE. (1) The self_exclusion.activated
+  row initially failed to land because the guard matched text I had just
+  written elsewhere in the same file. (2) I wrote "11 live sites" as a
+  producer count without verifying it; src has 29 audit.append call sites
+  and I had not established which belong in that table. The unverified
+  number was removed rather than guessed at — a count in a reference
+  document is a claim like any other.
+
+  Outbox allowlist aligned: all three unwired producers now carry an
+  UNWIRED note instead of a stale rationale.
+
+  STILL OPEN: AMEND-002 (V1 market scope, gated on counsel Q7.2) and the
+  State gaming licence — both with the founder.
+
+  VERIFICATION: 268/268 backend + 5/5 admin + 42/42 mobile; ruff, make
+  lint, ADR-002 outbox gate all green.
 ---
 ```
 
