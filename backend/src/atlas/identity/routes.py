@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from atlas.admin import service as admin_service
@@ -14,6 +14,7 @@ from atlas.identity import (
     mailhog_sender,
     otp_service,
     password_service,
+    self_exclusion,
     session_service,
 )
 from atlas.identity import (
@@ -30,6 +31,10 @@ from atlas.identity.schemas import (
     PasswordSetRequest,
     RegisterRequest,
     RegisterResponse,
+    SelfExcludeRequest,
+    SelfExcludeResponse,
+    SelfExclusionList,
+    SelfExclusionSummary,
     SessionCreateRequest,
     SessionCreateResponse,
     SessionCurrentResponse,
@@ -42,6 +47,7 @@ _OTP_ISSUE = "POST /api/v1/otps"
 _OTP_VERIFY = "POST /api/v1/otps/verify"
 _PASSWORD_SET = "POST /api/v1/users/{id}/password"
 _SESSION_CREATE = "POST /api/v1/sessions"
+_SELF_EXCLUDE = "POST /api/v1/users/me/self-exclude"
 
 
 @router.post(
@@ -230,3 +236,102 @@ async def get_current_session(
         roles=roles,
         is_admin=admin_service.SUPERADMIN_ROLE in roles,
     )
+
+
+@router.post(
+    "/users/me/self-exclude",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SelfExcludeResponse,
+)
+async def self_exclude(
+    body: SelfExcludeRequest,
+    db: AsyncSession = Depends(get_session),
+    session: SessionRow = Depends(current_session),
+    idempotency: IdempotencyGuard = Depends(
+        idempotency_guard(endpoint=_SELF_EXCLUDE)
+    ),
+) -> SelfExcludeResponse:
+    """Permanent self-exclusion (ADR-010 Phase A).
+
+    One-way door. Closes the account, revokes every session including this
+    one, and writes the exclusion registry row. There is no un-exclude
+    endpoint and there will not be one in V1.
+
+    `confirmation` must be the literal "EXCLUDE" (enforced by the schema)
+    and `otp_code` must be a valid `login_mfa` OTP, per ADR-010's
+    confirmation requirements. The client requests that OTP via
+    POST /api/v1/otps immediately beforehand.
+    """
+    if idempotency.cached_response is not None:
+        return SelfExcludeResponse.model_validate(idempotency.cached_response)
+
+    # MFA challenge. Raises OTPVerificationFailed (401) on a bad or expired
+    # code — deliberately before any state change, so a failed challenge
+    # leaves the account untouched.
+    await otp_service.verify(
+        db,
+        user_id=session.user_id,
+        purpose="login_mfa",
+        code=body.otp_code,
+    )
+
+    row, sessions_revoked = await self_exclusion.exclude(
+        db, user_id=session.user_id
+    )
+
+    response = SelfExcludeResponse(
+        user_id=row.user_id,
+        excluded_at=row.excluded_at,
+        sessions_revoked=sessions_revoked,
+    )
+    await idempotency.record(
+        db,
+        status_code=status.HTTP_201_CREATED,
+        response_body=response.model_dump(mode="json"),
+    )
+    await db.commit()
+    return response
+
+
+@router.get(
+    "/self-exclusions",
+    status_code=status.HTTP_200_OK,
+    response_model=SelfExclusionList,
+)
+async def list_self_exclusions(
+    db: AsyncSession = Depends(get_session),
+    session: SessionRow = Depends(current_session),
+) -> SelfExclusionList:
+    """Operator read-only list (ADR-010 Phase A, plan item A6).
+
+    Read-only by design. There is no companion DELETE or PATCH: V1
+    exclusion is permanent and the absence of an un-exclude affordance is
+    part of the enforcement (ADR-010 amendment §Invariants added). An
+    operator who needs to discuss a case does so with the user, not with
+    this table.
+    """
+    if not await admin_service.is_superadmin(db, user_id=session.user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "operator_role_required",
+                "message": "Self-exclusion registry access is an operator action.",
+            },
+        )
+
+    rows = await self_exclusion.list_all(db)
+    items: list[SelfExclusionSummary] = []
+    for row in rows:
+        user = await db.get(User, row.user_id)
+        items.append(
+            SelfExclusionSummary(
+                user_id=row.user_id,
+                email=user.email if user is not None else "(deleted)",
+                excluded_at=row.excluded_at,
+                excluded_by=row.excluded_by,
+                excluded_by_id=row.excluded_by_id,
+                reason=row.reason,
+                bvn_enforced=row.bvn_hash is not None,
+            )
+        )
+    return SelfExclusionList(items=items)

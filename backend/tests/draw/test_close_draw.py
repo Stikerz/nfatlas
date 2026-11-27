@@ -133,20 +133,9 @@ async def _buy_paid_ticket(
     client: AsyncClient, draw_id: uuid.UUID, token: str, email: str
 ) -> str:
     """Full purchase → webhook path. Returns vendor_reference for the intent."""
-    next_resp = await client.get(
-        f"/api/v1/draws/{draw_id}/skill-questions/next",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    q = next_resp.json()
-    correct_id = next(o["id"] for o in q["options"] if o["text"] == "correct")
-    await client.post(
-        f"/api/v1/skill-questions/attempts/{q['attempt_id']}/answer",
-        json={"option_id": correct_id},
-        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-    )
     purchase = await client.post(
         "/api/v1/tickets/purchase",
-        json={"draw_id": str(draw_id), "entitlement_id": q["attempt_id"]},
+        json={"draw_id": str(draw_id)},
         headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
     )
     vendor_ref = purchase.json()["vendor_reference"]
@@ -338,18 +327,6 @@ class TestCloseStateGuards:
         draw = await _seed_draw(db_session)
         _, _, user_token = await _register_login(client, _stub_mailhog)
 
-        # Get entitlement BEFORE close (skill next requires sales_open too).
-        next_resp = await client.get(
-            f"/api/v1/draws/{draw.id}/skill-questions/next",
-            headers={"Authorization": f"Bearer {user_token}"},
-        )
-        q = next_resp.json()
-        correct_id = next(o["id"] for o in q["options"] if o["text"] == "correct")
-        await client.post(
-            f"/api/v1/skill-questions/attempts/{q['attempt_id']}/answer",
-            json={"option_id": correct_id},
-            headers={"Authorization": f"Bearer {user_token}", "Idempotency-Key": str(uuid.uuid4())},
-        )
 
         _, _, admin_token = await _register_login(
             client, _stub_mailhog, db_session=db_session, make_admin=True
@@ -361,7 +338,7 @@ class TestCloseStateGuards:
 
         purchase = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": q["attempt_id"]},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {user_token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         assert purchase.status_code == 409

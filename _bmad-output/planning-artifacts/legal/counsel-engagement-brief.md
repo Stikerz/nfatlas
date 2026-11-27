@@ -1,8 +1,29 @@
 # Project Atlas — Counsel Engagement Brief
 
 **Drafted:** 2026-06-30
+**Revised:** 2026-11-24 — **substantial rewrite of §1, §2, Q1, Q5, Q7, §4.**
 **Drafted by:** 📊 Mary (BMad Analyst) on behalf of Atlas founder S1408661
-**Status:** Draft — pending founder review before transmission to counsel
+**Revised by:** ⚖️ Adaeze (atlas-compliance-risk)
+**Status:** Draft — pending founder review before transmission to counsel. **NOT YET SENT.**
+
+> **Why this was rewritten before it was ever sent.** The 2026-06-30 draft asked
+> whether Atlas qualifies for a carve-out from the National Lottery Act 2005.
+> On 2026-11-23 desk research established that the NLRA 2005 was nullified by
+> the Supreme Court of Nigeria on 22 November 2024 (*AG Lagos State & Ors v
+> AG Federation*, SC/1/2008), that lottery and gaming are now exclusively
+> State matters, and that the NLRC holds no national licensing authority.
+> Transmitting the original draft would have commissioned a fixed-fee opinion
+> on a void statute, with Q1 — the question that gates the other seven —
+> aimed at the wrong regime.
+>
+> Separately, Atlas removed its free-entry route on 2026-11-23 (founder
+> decision). The original brief described two load-bearing mechanisms. There
+> is now one. §2 and Q1 are rewritten accordingly.
+>
+> Nothing in this box is legal advice. The research is single-pass and
+> self-reports medium to medium-high confidence; the SC/1/2008 judgment text
+> was not retrieved. **Counsel should verify the judgment and its effect as
+> the first substantive step of the engagement.**
 **Audience:** Nigerian gambling/promotions/regulatory counsel (intended recipients: senior partner at one of Banwo & Ighodalo, Aluko & Oyebode, Templars, Olaniwun Ajayi, or comparable firm)
 **Length:** ~6 pages
 **Pairs with:** `_bmad-output/planning-artifacts/prds/prd-nf-atlas-2026-06-29/PRD.md`, `_bmad-output/planning-artifacts/delivery-framework.md`, the (currently blocked) regulatory research at `_bmad-output/planning-artifacts/research/domain-nigerian-prize-competition-licensing-research-2026-06-30.md`
@@ -24,7 +45,14 @@ The brief is **not** legal advice, **not** a finished legal position, and **not*
 
 ## 1. The ask in one paragraph
 
-Atlas seeks a written legal opinion from Nigerian counsel addressing **seven numbered questions** (§3 below), delivered within **4–6 weeks** of engagement, on a **fixed-fee or capped-fee basis**, in a format suitable for reliance by Atlas, its investors, and its auditors. The most consequential question is Q1 — whether Atlas's intended model qualifies as a prize competition (no NLRC licence required) or as a lottery (NLRC licence required), under the National Lottery Act 2005 and current NLRC interpretive practice. Q1's outcome determines whether the rest of the engagement is implementation-of-prize-competition or licensing-pathway-for-a-lottery.
+Atlas seeks a written legal opinion from Nigerian counsel addressing **eight numbered questions** (§3 below), delivered within **4–6 weeks** of engagement, on a **fixed-fee or capped-fee basis**, in a format suitable for reliance by Atlas, its investors, and its auditors.
+
+The two most consequential questions are **Q1** and **Q7**, and they have swapped places since the original draft. Atlas no longer asks counsel to confirm a federal carve-out, because Atlas's own research indicates there is no longer a federal statute to be carved out of. Atlas asks instead:
+
+- **Q7 (now Critical):** which State regime or regimes govern an online prize-draw operator serving Nigerian users, and what does each require?
+- **Q1 (now Critical, reframed):** under the governing State law — in Atlas's launch market, the Lagos State Lotteries and Gaming Authority Law 2021 — is Atlas's model licensable, prohibited, or outside scope; what licence applies; what does it cost; and how long does it take?
+
+**Atlas is explicitly open to the answer being "you need a licence."** The founder would rather know the licensing cost and timeline now and decide whether the business is viable at that cost, than receive reassurance that a carve-out applies and discover otherwise after taking money from consumers. Counsel should not optimise their answer toward Atlas's preferred outcome. There isn't one.
 
 ---
 
@@ -36,10 +64,19 @@ A premium digital prize platform launching in Nigeria, positioned as a trusted l
 
 ### Intended mechanics (the core legal-design choices)
 
-Atlas's V1 product design follows a **UK-style prize-competition model**, analogous to BOTB (Best of the Best), Omaze, Raffle House, and Aspire Competitions in the UK market. The two load-bearing design choices are:
+Atlas's V1 design was modelled on **UK prize competitions** — BOTB (Best of the Best), Omaze, Raffle House, Aspire Competitions. Counsel should treat that lineage as *explanatory background only*, not as an argument Atlas is advancing. Atlas now understands the UK analogy may not survive contact with Nigerian State law.
 
-1. **Free entry route on every draw.** Every draw offers a non-paid route (V1: postal entry to a leased P.O. box with a handwritten entry slip, transcribed by operations within 24 hours). Free-route tickets enter the same prize pool with identical odds to paid tickets. The free route is disclosed prominently on every draw page, not buried in T&Cs.
-2. **Skill question on every paid entry.** Every paid entry path requires the entrant to answer a substantive skill question (multiple-choice, rotated, of non-trivial difficulty) before payment can complete. Wrong answer = entry rejected, no charge. The skill-question content set is operator-curated and rotated.
+**As the product stands on 2026-11-24, there is exactly one mechanism:**
+
+1. **Skill question on every paid entry.** Each paid entry requires the entrant to answer a question before payment completes. Wrong answer = entry rejected, no charge.
+
+Atlas must be candid with counsel about that mechanism's current quality, because overstating it would corrupt the opinion. As implemented today it is **four-option multiple choice drawn from a small pool**, deterministically rotated per user per draw per minute, with each request creating a fresh attempt — so a wrong answer can be retried immediately with the same question. Atlas's own Compliance & Risk function assessed it against the nearest published benchmark (UK Gambling Act 2005 s.14(5)) and concluded it would **probably fail** that test, and rejected it for real-user launch in an internal review dated 2026-07-08. That rejection has not been lifted. Remediation is scoped but unbuilt.
+
+**Two mechanisms were described in the 2026-06-30 draft. Both have gone:**
+
+- *Free entry route (removed 2026-11-23).* Every draw was to offer a non-paid postal route into the same pool at identical odds. Counsel should know two things about it. First, it was removed by founder decision. Second, and more importantly: **it was never operable.** The P.O. box was never leased. Atlas's internal review flagged this on 2026-07-08 and it remained open. For the duration of the V0.5 demo period, Atlas's public pages described a free entry route with no address to post to. Atlas is disclosing this rather than presenting the route as a mechanism it once had. No real-money draw has ever been run, and the demo period involved no public users.
+
+Atlas would also welcome counsel's view on whether **reinstating a genuine, properly operated free entry route** (self-service and online, rather than postal) would change the analysis — see Q1.6.
 
 ### Other design choices counsel should know
 
@@ -54,26 +91,40 @@ Atlas's V1 product design follows a **UK-style prize-competition model**, analog
 
 ### Where the product sits on the legal-risk spectrum
 
-Atlas's design choices are deliberately closer to UK prize competitions (BOTB/Omaze) than to traditional lotteries. **Atlas does not yet know whether Nigerian law and NLRC interpretive practice accept this distinction.** That is the central question this engagement must resolve.
+Atlas's own position, revised 2026-11-24 and stated plainly so counsel can disagree with something concrete:
+
+**Atlas now believes it probably requires a State gaming licence, and that no mechanic available to it changes that.** Its desk research found that the Lagos State Lotteries and Gaming Authority Law 2021 defines "Gaming" as any scheme for distributing prizes by lot or chance **with no payment or consideration element in the definition at all**, expressly classes promotional competitions as "Other lotteries", prohibits operating or promoting any "plan, scheme, competition, prize... whether remotely or otherwise in the State" without a licence, and — via the Remote Gaming Regulations 2021 — reaches remote providers serving a Lagos customer even where the customer plays free for a chance at a prize. If that reading is right, the free-entry argument fails for want of a payment element to negate, and the skill argument has nothing to attach to.
+
+Atlas is not asking counsel to validate that pessimism. Atlas is asking counsel to **correct it or confirm it, and if confirmed, to price the licensed path.**
+
+Two commercial gatekeepers may bind before any regulator does, and Atlas flags them so counsel can factor them into sequencing: Paystack's merchant terms prohibit "any other activity with an entry fee and a prize... games of skill (whether or not it is legally defined as a lottery) and sweepstakes" absent prior approval, and Google Play treats a game accepting money for a chance at a prize as a policy violation without a gambling licence. Atlas ships Paystack-only and mobile-only. Either gatekeeper can stop the product without a regulator being involved.
 
 ---
 
 ## 3. Questions for opinion
 
-Numbered. Ranked by criticality. Each question states *why it matters*, *Atlas's working hypothesis*, and *the specific opinion sought*. Counsel is free to challenge hypotheses, restate questions, or surface adjacent issues we have missed.
+Numbered, with criticality marked. Each question states *why it matters*, *Atlas's working hypothesis*, and *the specific opinion sought*. Counsel is free to challenge hypotheses, restate questions, or surface adjacent issues we have missed — and Atlas would rather be told it has asked the wrong questions than receive precise answers to poor ones.
 
-### Q1 (Critical) — Classification: prize competition vs lottery
+**Reading order.** The numbering is historical and no longer matches priority. **Please answer Q7 first, then Q1** — Q7 establishes which law governs and Q1 applies it. Q2-Q6 and Q8 largely presuppose that Atlas is operating; if Q1 and Q7 conclude it cannot operate as designed, counsel should say so and pause rather than working through the remainder at Atlas's expense.
 
-**Why it matters.** This determines whether Atlas operates under a prize-competition framework (no NLRC licence required, presumed) or under a lottery framework (NLRC licence required, with the attendant licensing fees, prize-pool contribution obligations, and ongoing reporting). The two paths produce different products, different unit economics, different vendor decisions, and different launch timelines.
+### Q1 (Critical) — Classification and licensability under the governing State law
 
-**Atlas's working hypothesis.** Under the National Lottery Act 2005's statutory definitions of "lottery" — and the NLRC's interpretive practice — the combination of (a) a *free entry route* with identical odds and (b) a *substantive skill question* on every paid entry path is sufficient to remove an arrangement from the "lottery" classification under Nigerian law, by analogy with the position under the UK Gambling Act 2005 (where prize competitions involving genuine skill, or paid entries with a free entry route of equal odds, fall outside the regulated gambling framework). **We assess this as a hypothesis with low-to-medium confidence** because the analogy from UK law to Nigerian law is not automatic, and because the NLRC's posture on prize competitions specifically (as distinct from promotional competitions tied to a primary product purchase) is unclear from public sources.
+**Why it matters.** This determines whether Atlas can lawfully operate at all, and if so at what cost. The original draft framed this as prize competition (no licence) versus lottery (licence). Atlas no longer believes that is the live question. Please read Q7 first — it establishes *which* law governs; Q1 then asks what that law does to Atlas.
+
+**Atlas's working hypothesis (revised 2026-11-24, low-to-medium confidence).** Under the Lagos State Lotteries and Gaming Authority Law 2021, Atlas's model falls **inside** the regulated perimeter and requires a licence, because the statutory definition of "Gaming" requires only chance and a prize and contains no payment or consideration element, and because promotional competitions are expressly classed as "Other lotteries". Atlas further assumes that neither a skill element nor a free entry route removes it from that perimeter, there being no equivalent to UK Gambling Act 2005 s.14 in the State law examined. **Atlas holds this hypothesis without confidence and would welcome being wrong.**
 
 **Specific opinion sought.**
-1. Does the NLRA 2005 (and any subsidiary regulation or NLRC circular) define "lottery" in terms that *do* or *do not* capture Atlas's intended model?
-2. Has the NLRC published, or otherwise communicated, a position on prize competitions that include both a free entry route and a skill question?
-3. If Atlas's hypothesis is correct, what are the **minimum design conditions** Atlas must meet to defend the prize-competition classification (e.g. demonstrable equality of odds between free and paid routes; difficulty threshold for the skill question; specific disclosure language)?
-4. If Atlas's hypothesis is wrong, what licensing path applies — federal NLRC, state-level (Lagos State Lotteries and Gaming Authority for Lagos-resident operations), or both? What is the realistic timeline and cost of obtaining the necessary licence?
-5. Have any prior operators tested the prize-competition model in Nigeria? If so, with what outcome?
+
+1. Confirm or correct Atlas's reading of the NLRA 2005's nullification: is there any residual federal lottery statute, any saving provision, any application to the FCT, or any pending legislative replacement (the Central Gaming Bill 2025 and its non-assent) that bears on an online operator serving users nationwide?
+2. Under the governing State law identified in Q7, does Atlas's model fall inside the regulated perimeter? Quote the operative definitional language and apply it to the facts in §2.
+3. If inside: **which licence category, what does it cost, what capital or guarantee is required, what certification, and what is a realistic end-to-end timeline?** Atlas has seen unverified third-party figures suggesting ₦250–400m in year one for Lagos. Please confirm, correct, or replace them with figures counsel will stand behind. This number may determine whether the business proceeds.
+4. If outside, or capable of being brought outside: what are the **minimum design conditions** Atlas must meet and maintain? Please be specific enough to build against — Atlas's engineering team will implement exactly what counsel specifies, and nothing counsel does not.
+5. **Does the skill question, as honestly described in §2, achieve anything under the governing law?** Atlas's own assessment is that it does not, and may carry its own exposure: Atlas understands the Lagos advertising code may treat a suggestion that skill influences a game of chance as a misleading claim. If the skill question is legally inert or actively adverse in Nigeria, Atlas would rather remove it and recover the conversion it costs.
+6. **Would reinstating a genuine free entry route change the analysis** — and if so, what would make it "genuine" (self-service versus postal, prominence, odds parity, volume parity with paid entries)? Atlas removed its route and can rebuild it properly in roughly a week of engineering if counsel says it is load-bearing.
+7. Has any operator tested a model like Atlas's in Nigeria, under the federal regime before November 2024 or under State regimes since? With what outcome?
+8. What is the exposure for the V0.5 demo period already elapsed — no public users, no real money, no completed real-money draw, but a publicly reachable website describing paid prize draws? Atlas asks so it can disclose accurately to investors, not to seek comfort.
+
+**Consequence of each answer, so counsel can see what rides on it.** Licensable at a cost Atlas can bear → Atlas licenses and proceeds. Licensable but uneconomic → Atlas restructures or does not launch in Nigeria. Prohibited → Atlas does not launch. Outside scope on stated conditions → Atlas builds precisely those conditions and asks counsel to confirm the build.
 
 ### Q2 (High) — KYC and AML obligations
 
@@ -112,21 +163,27 @@ Numbered. Ranked by criticality. Each question states *why it matters*, *Atlas's
 4. Confirm data retention obligations and limits — particularly for KYC records (regulatory minimum vs maximum) and the self-exclusion registry (Atlas's stance is permanent retention; counsel confirm this is lawful).
 5. Comment on whether Atlas's hash-chained append-only audit log (ADR-005) creates any data-protection tension with right-to-erasure obligations.
 
-### Q5 (Medium) — Marketing and advertising restrictions
+### Q5 (HIGH — raised from Medium 2026-11-24) — Marketing and advertising restrictions
 
 **Why it matters.** Atlas's brand positioning depends on a specific lexicon (avoiding "lottery," "raffle," "luck"). Public-facing copy on draws must satisfy both consumer-protection norms and any sector-specific advertising standards. Channel-specific restrictions (WhatsApp Business, SMS, in-app push) may apply.
 
-**Atlas's working hypothesis.** Atlas's copy bans are sufficient to avoid sector-specific advertising rules that would otherwise apply to lotteries. Standard Nigerian consumer-protection norms (truth in advertising, non-misleading representations of odds and prize values) apply. Influencer marketing carries its own disclosure obligations.
+**Atlas's working hypothesis (revised 2026-11-24).** Atlas no longer assumes its copy bans are sufficient. Two specific concerns now sit above the lexicon question. First, Atlas understands the Lagos State regime may prohibit *advertising or promoting* an unlicensed scheme independently of operating one — meaning marketing could create exposure before a single entry is sold. Second, Atlas understands the Lagos advertising code may treat a suggestion that **skill influences a game of chance** as a misleading claim, which would make Atlas's own skill-question messaging adverse rather than protective.
+
+Atlas also discloses, for completeness, that an internal compliance review on 2026-11-23 found three live consumer-facing claims unsupported by implementation: a permanent self-exclusion regime that was not built, a free entry route with no postal address, and age verification described as occurring "at every purchase" when it occurred only at registration. All three have been corrected or removed. No real-money draw was ever run and the site had no public user base. Atlas raises this unprompted because counsel's advice on remediation and disclosure is worth more than counsel's goodwill.
 
 **Specific opinion sought.**
-1. Identify any sector-specific advertising rules (NLRC, APCON, FCCPC) that apply to Atlas under the prize-competition framework — and how those differ from the rules that would apply if classified as a lottery.
+1. Identify the advertising and promotional rules that apply under the governing State regime (and any FCCPC or ARCON/APCON overlay), **including whether advertising or promoting an unlicensed scheme is itself an offence**, and what that means for pre-licence marketing.
+1a. Advise on whether Atlas's skill-question messaging creates exposure under any "skill influences chance" misleading-claim provision, and how such messaging should be worded if the mechanic is retained.
+1b. Advise on Atlas's remediation and disclosure obligations, if any, arising from the three corrected claims above.
 2. Confirm the disclosure obligations on draw pages (odds, prize value, free-entry route, T&Cs link).
 3. Comment on influencer / affiliate marketing rules.
 4. Comment on channel-specific rules — WhatsApp Business Meta policy compliance for prize-draw operators in Nigeria.
 
 ### Q6 (Medium) — Responsible play and self-exclusion
 
-**Why it matters.** Atlas is trust-first and positions itself adjacent to gambling without being gambling. The product carries responsible-play obligations regardless of classification — operationally implemented through BVN-keyed permanent self-exclusion (ADR-010) and age gating (18+). Counsel should confirm whether Nigerian law imposes additional specific obligations.
+**Why it matters.** Atlas is trust-first and positions itself adjacent to gambling without being gambling. The product carries responsible-play obligations regardless of classification.
+
+**Correction to the 2026-06-30 draft, which counsel must not be misled by.** That draft described self-exclusion as "operationally implemented through BVN-keyed permanent self-exclusion (ADR-010)". **It is not implemented.** ADR-010 was approved on 2026-07-02 and never built: there is no exclusion registry, no enforcement at purchase, and no in-app flow. Until 2026-11-23 Atlas's public responsible-play page described the regime as live; that copy has been corrected to say it is in development. Age gating at registration **is** real and enforced in code. Atlas also operates no per-user entry cap and no spend ceiling, and removed the free entry route that page had cited as a harm-reduction control.
 
 **Atlas's working hypothesis.** Nigerian law does not yet impose prize-competition-specific responsible-play obligations as comprehensive as the UK's framework (Gambling Commission's responsible-gambling requirements). However, generic consumer-protection obligations apply, and best-practice voluntary measures (self-exclusion, deposit limits, cool-off periods) are anticipated by the market. V1 ships self-exclusion only; deposit limits and cool-off are V2 candidates.
 
@@ -135,17 +192,20 @@ Numbered. Ranked by criticality. Each question states *why it matters*, *Atlas's
 2. Comment on whether Atlas's permanent-only self-exclusion (no reversal mechanism in V1) is lawful, recommended, or potentially over-restrictive.
 3. Identify any age-verification rules beyond BVN-confirmed adult status.
 
-### Q7 (Medium) — Federal vs Lagos State jurisdiction
+### Q7 (CRITICAL — promoted from Medium 2026-11-24) — Which regime governs
 
-**Why it matters.** There has been ongoing tension between federal lottery regulation (NLRC, under the NLRA 2005) and state-level lottery regulation, particularly in Lagos State (Lagos State Lotteries and Gaming Authority). Operators have faced enforcement from both. The position has been litigated. Atlas needs to know whether to register/license/notify at federal level only, state level only, or both — and how that scales across V2 expansion to additional states.
+**Why it matters.** This now precedes Q1 logically and should be answered first. The 2026-06-30 draft treated State jurisdiction as a secondary clean-up question on the assumption that a federal regime governed. If the Supreme Court nullified the NLRA 2005 and lottery/gaming is a residual State matter, then **State law is the only law**, and "which State" is the question that determines everything downstream. The original draft did ask counsel to cover "any recent Supreme Court or Federal High Court decisions" — Atlas simply never ran the research that would have shown how much turned on it.
 
-**Atlas's working hypothesis.** If Q1 confirms Atlas operates as a prize competition outside the lottery framework, Atlas should still proactively engage Lagos State authorities for clarity, given Lagos's established posture of asserting jurisdiction over gaming activities reaching Lagos residents. We hypothesise that prize-competition classification removes the licensing obligation but may not remove a notification or registration obligation at state level.
+**Atlas's working hypothesis (revised 2026-11-24, medium confidence).** Lottery and gaming are now exclusively within State legislative competence following *AG Lagos State & Ors v AG Federation* (SC/1/2008, 22 November 2024). An online operator has no single federal licence available to it and must instead address each State whose residents it serves. Lagos is Atlas's launch market and the Lagos State Lotteries and Gaming Authority Law 2021, with its Remote Gaming Regulations 2021, is the governing instrument.
 
 **Specific opinion sought.**
-1. Summarise the current state of federal-vs-state lottery jurisdiction in Nigeria, including any recent Supreme Court or Federal High Court decisions.
-2. Identify the Lagos State posture toward prize competitions (as distinct from lotteries).
-3. Comment on whether Atlas's Lagos-resident users trigger Lagos State notification or registration obligations.
-4. Comment on the V2 expansion path — what changes when Atlas reaches users in additional states with their own lottery regulators (Oyo, FCT, etc.)?
+1. Verify the judgment and state its ratio and effect precisely. Is the NLRA 2005 void in whole or in part? Does anything survive for the FCT? What is the status of the Central Gaming Bill 2025 following non-assent, and is a replacement expected?
+2. **Which State's law governs an online operator incorporated in Nigeria serving users across multiple States?** Is it the State of incorporation, the State of each user's residence, every State in which the service is reachable, or something else? How does an operator comply with a nationwide user base in practice — a licence per State, a lead-State approach, or geo-restriction to licensed States only?
+3. Set out what the Lagos State Lotteries and Gaming Authority Law 2021 and its Remote Gaming Regulations 2021 require of a remote operator serving a Lagos customer: registration, licensing, fees, gaming tax or GGR levy, local-entity and share-capital requirements, bank guarantee, technical certification (GLI/BMM or equivalent), and reporting.
+4. Is there a **promotional-competition permit** or lighter-touch registration distinct from a full gaming licence, and would Atlas qualify for it? If so, what does it cost? Atlas's research could not establish this and flags it as the single highest-leverage unknown in the whole engagement — a cheap permit and a ₦250m licence are different businesses.
+5. **Is a staged or limited launch available** — a single State, a capped prize value, an invite-only beta — that would let Atlas operate lawfully at smaller scale while a full licence is pursued?
+6. Penalties for unlicensed operation and for unlicensed advertising: civil, criminal, or both; who is personally liable (directors, officers); and whether voluntary pre-licence disclosure to the regulator mitigates.
+7. V2 expansion: what changes as Atlas reaches users in further States, and is there any inter-State recognition or passporting?
 
 ### Q8 (Deferred to V2 — counsel may comment briefly) — Property prizes
 
@@ -168,9 +228,17 @@ Numbered. Ranked by criticality. Each question states *why it matters*, *Atlas's
 | ADR-006 Commit-reveal draw protocol | `docs/adr/ADR-006-commit-reveal-protocol-and-public-entropy.md` | Provably-fair design — relevant to Q1 (fairness claim defensibility) |
 | ADR-007 KYC vendor adapter | `docs/adr/ADR-007-kyc-vendor-adapter.md` | KYC architectural design; not vendor choice (that is procurement) |
 | ADR-009 RBAC model | `docs/adr/ADR-009-rbac-model.md` | Operator-action audit trail design |
-| ADR-010 Self-exclusion (BVN-keyed) | `docs/adr/ADR-010-self-exclusion-bvn-enforcement.md` | Relevant to Q6 (permanent exclusion stance) |
+| ADR-010 Self-exclusion (BVN-keyed) | `docs/adr/ADR-010-self-exclusion-bvn-enforcement.md` | Relevant to Q6. **Approved but NOT IMPLEMENTED** — no registry exists |
+| **Classification research (2026-11-23)** | `_bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md` | **Read before Q1 and Q7.** Atlas's own desk research, with sources and per-finding confidence levels. Single-pass, not legal advice; the SC/1/2008 judgment text was not retrieved |
+| **Compliance review REVIEW-001** | `docs/compliance/reviews/REVIEW-001-v0.5-consumer-wireframes.md` | §3.1 — Atlas's own rejection of its skill question for real-user launch |
+| **Compliance review REVIEW-002** | `docs/compliance/reviews/REVIEW-002-free-entry-route-removal.md` | The free-route removal, and §6 / Addendum A.2 on claims that shipped ahead of implementation |
+| **Risk register** | `docs/risk-register.md` | §1 regulatory risks, incl. R-REG-08/09/10 raised 2026-11-24 |
 
-Atlas's compliance copy block for the free-entry route and the skill-question content set are still in drafting (Phase 0 work in parallel to this engagement). Counsel review will be requested when drafted.
+**Two caveats on the supporting set, stated so counsel does not have to discover them.**
+
+The PRD and the delivery framework are **superseded in part and not yet amended.** Both still describe a free entry route and a two-mechanism prize-competition model. Atlas's change-control process requires a formal amendment that has not yet been executed. Where those documents conflict with §2 of this brief, **§2 is current.**
+
+Atlas's compliance copy block for the skill-question content set is still in drafting and the free-entry copy block has been withdrawn. `docs/compliance/skill-questions.md`, referenced in Atlas's internal reviews as the governing policy artefact, **has not been written.**
 
 ---
 
@@ -179,7 +247,7 @@ Atlas's compliance copy block for the free-entry route and the skill-question co
 ### Deliverable shape
 
 - **Form:** written legal opinion, PDF + editable Word.
-- **Length:** as needed for the seven numbered questions; Atlas's expectation is 30–60 pages including statutory references and case citations.
+- **Length:** as needed for the eight numbered questions; Atlas's expectation is 30–60 pages including statutory references and case citations. Atlas would accept — and would value — a short early note on Q7 and Q1 ahead of the full opinion, if counsel can give a preliminary view sooner. Those two answers gate engineering and spend.
 - **Reliance:** opinion to be reliable upon by Atlas, its officers, its institutional investors, and its statutory auditors. Counsel may scope reliance via standard wording.
 - **Confidentiality:** standard. Atlas will execute mutual NDA before transmitting confidential business model details beyond this brief.
 

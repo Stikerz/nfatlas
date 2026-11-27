@@ -13,7 +13,6 @@ from atlas.config import get_settings
 from atlas.draw.routes import router as draw_router
 from atlas.identity.routes import router as identity_router
 from atlas.payment.routes import router as payment_router
-from atlas.skill.routes import router as skill_router
 from atlas.ticket.routes import router as ticket_router
 from atlas.wallet.routes import router as wallet_router
 
@@ -33,7 +32,6 @@ async def healthz() -> dict[str, str]:
 app.include_router(identity_router)
 app.include_router(payment_router)
 app.include_router(draw_router)
-app.include_router(skill_router)
 app.include_router(ticket_router)
 app.include_router(wallet_router)
 app.include_router(audit_log_router)

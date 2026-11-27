@@ -156,3 +156,47 @@ async def load_active(
     if row.expires_at <= datetime.now(UTC):
         raise SessionRevoked()
     return row
+
+
+async def revoke_all_for_user(
+    db: AsyncSession, *, user_id: uuid.UUID, revoked_by: str = "user"
+) -> int:
+    """Revoke every live session for a user. Returns the count revoked.
+
+    Called by `atlas.identity.self_exclusion` in the same transaction as
+    the exclusion write, so an excluded user cannot continue on a session
+    issued before the exclusion (ADR-010 §Enforcement points, login).
+
+    Idempotent: already-revoked rows are skipped, so a replay revokes 0
+    and emits no audit entries.
+    """
+    rows = (
+        await db.execute(
+            select(Session).where(
+                Session.user_id == user_id,
+                Session.revoked_at.is_(None),
+            )
+        )
+    ).scalars().all()
+
+    now = datetime.now(UTC)
+    for row in rows:
+        row.revoked_at = now
+    if rows:
+        await db.flush()
+
+    for row in rows:
+        await audit.append(
+            db,
+            actor_type="user",
+            actor_id=str(user_id),
+            event_name="session.revoked",
+            subject_type="user",
+            subject_id=str(user_id),
+            payload={
+                "user_id": str(user_id),
+                "session_id": str(row.id),
+                "revoked_by": revoked_by,
+            },
+        )
+    return len(rows)

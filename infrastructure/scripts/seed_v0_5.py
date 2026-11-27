@@ -163,7 +163,11 @@ async def _seed_draw(session) -> Draw:
 
 
 async def _seed_questions(session) -> int:
-    """Idempotent upsert of the 10 demo skill questions + options."""
+    """DEPRECATED 2026-11-26 (AMEND-003) — the skill question was
+    removed. Retained as a no-op so the seed script's call sites and the
+    retained tables stay consistent; delete when the tables go (they are
+    held for the ADR-005 audit chain, so: not soon)."""
+    return  # no-op
     for q_id, prompt, options in DEMO_QUESTIONS:
         q_stmt = (
             pg_insert(SkillQuestion)

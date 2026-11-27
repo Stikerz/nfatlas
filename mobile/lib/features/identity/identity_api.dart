@@ -95,6 +95,28 @@ class IdentityApi {
     );
   }
 
+  /// ADR-010 Phase A. One-way door: closes the account, revokes every
+  /// session (including this one), and records the exclusion registry row.
+  ///
+  /// Requires a `login_mfa` OTP issued immediately beforehand via
+  /// [issueOtp], plus the literal confirmation string `EXCLUDE` — both
+  /// enforced server-side, so a client bug cannot close an account by
+  /// accident.
+  Future<SelfExclusionResult> selfExclude({required String otpCode}) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/api/v1/users/me/self-exclude',
+      data: {'confirmation': 'EXCLUDE', 'otp_code': otpCode},
+    );
+    _assertOk(response, expected: 201);
+    final body = response.data!;
+    return SelfExclusionResult(
+      userId: body['user_id'] as String,
+      excludedAt: DateTime.parse(body['excluded_at'] as String),
+      sessionsRevoked: body['sessions_revoked'] as int,
+      crossAccountEnforced: body['cross_account_enforced'] as bool? ?? false,
+    );
+  }
+
   Future<void> logout() async {
     await _dio.post<void>('/api/v1/sessions/current/logout');
   }
@@ -165,6 +187,24 @@ class CurrentSession {
   final String sessionId;
   final String userId;
   final DateTime expiresAt;
+}
+
+/// Result of a permanent account closure (ADR-010 Phase A).
+///
+/// [crossAccountEnforced] is reported by the server and is `false` until
+/// Phase B (BVN matching, gated on ADR-007). The UI must not promise
+/// cross-account enforcement while it is false.
+class SelfExclusionResult {
+  const SelfExclusionResult({
+    required this.userId,
+    required this.excludedAt,
+    required this.sessionsRevoked,
+    required this.crossAccountEnforced,
+  });
+  final String userId;
+  final DateTime excludedAt;
+  final int sessionsRevoked;
+  final bool crossAccountEnforced;
 }
 
 final identityApiProvider = Provider<IdentityApi>(

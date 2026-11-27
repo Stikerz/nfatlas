@@ -26,8 +26,7 @@ import 'package:atlas_mobile/features/identity/otp_screen.dart';
 import 'package:atlas_mobile/features/identity/password_screen.dart';
 import 'package:atlas_mobile/features/identity/register_screen.dart';
 import 'package:atlas_mobile/features/identity/welcome_screen.dart';
-import 'package:atlas_mobile/features/skill/skill_api.dart';
-import 'package:atlas_mobile/features/skill/skill_question_screen.dart';
+import 'package:atlas_mobile/features/tickets/entry_purchase_screen.dart';
 import 'package:atlas_mobile/features/winners/winner_claim_screen.dart';
 import 'package:atlas_mobile/features/winners/winners_api.dart';
 import 'package:atlas_mobile/services/session_storage.dart';
@@ -79,26 +78,6 @@ Future<void> _loadAppFonts() async {
   }
 }
 
-/// SkillQuestionScreen loads its question from the API on init. Without this
-/// its golden was a spinner.
-class _FakeSkillApi extends SkillApi {
-  _FakeSkillApi() : super(Dio());
-
-  @override
-  Future<SkillQuestion> next(String drawId) async => SkillQuestion(
-    attemptId: 'a0f1c2d3-0000-4000-8000-000000000001',
-    questionId: 'q0f1c2d3-0000-4000-8000-000000000002',
-    prompt: 'What is the capital of Nigeria?',
-    options: const <SkillOption>[
-      SkillOption(id: 'opt-1', text: 'Lagos'),
-      SkillOption(id: 'opt-2', text: 'Abuja'),
-      SkillOption(id: 'opt-3', text: 'Kano'),
-      SkillOption(id: 'opt-4', text: 'Ibadan'),
-    ],
-    expiresAt: DateTime.utc(2026, 8, 28, 13, 5),
-  );
-}
-
 /// WinnerClaimScreen renders the ticket x draw_winners intersection, so it
 /// needs both APIs to return something that actually intersects — otherwise
 /// the golden shows the empty state at best, a spinner at worst.
@@ -128,7 +107,6 @@ class _FakeWinnersApi extends WinnersApi {
 Widget _host(Widget screen) {
   return ProviderScope(
     overrides: [
-      skillApiProvider.overrideWithValue(_FakeSkillApi()),
       ticketsApiProvider.overrideWithValue(_FakeTicketsApi()),
       winnersApiProvider.overrideWithValue(_FakeWinnersApi()),
       // Real controller over a bare Dio: constructed but never driven, since
@@ -240,7 +218,7 @@ void main() {
     'password': () => const PasswordScreen(),
     'welcome': () => const WelcomeScreen(),
     'home': () => const HomeScreen(),
-    'skill-question': () => SkillQuestionScreen(draw: _draw),
+    'entry-purchase': () => EntryPurchaseScreen(draw: _draw),
     'winner-claim': () => const WinnerClaimScreen(),
   };
 

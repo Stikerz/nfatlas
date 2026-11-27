@@ -9,10 +9,14 @@ from pydantic import BaseModel, ConfigDict
 
 
 class PurchaseTicketRequest(BaseModel):
+    """Entry purchase. The skill-question entitlement was removed on
+    2026-11-26 (AMEND-003) — lawfulness rests on the State gaming licence,
+    not on a draw mechanic, so there is nothing to gate the purchase on
+    beyond the draw being open and the buyer not being self-excluded."""
+
     model_config = ConfigDict(extra="forbid")
 
     draw_id: uuid.UUID
-    entitlement_id: uuid.UUID  # the skill_question_attempt id
 
 
 class PurchaseTicketResponse(BaseModel):
@@ -36,21 +40,3 @@ class TicketSummary(BaseModel):
 
 class TicketList(BaseModel):
     items: list[TicketSummary]
-
-
-class FreeEntryRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    draw_id: uuid.UUID
-    subject_user_id: uuid.UUID
-    # Any string per plan §0 ask 4 (real format is a Phase 3 decision).
-    slip_reference: str
-
-
-class FreeEntryResponse(BaseModel):
-    ticket_id: uuid.UUID
-    draw_id: uuid.UUID
-    ticket_number: int
-    subject_user_id: uuid.UUID
-    entry_source: str  # always 'free'
-    issued_at: datetime

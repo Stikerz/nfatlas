@@ -486,6 +486,665 @@ notes: |
 
 ---
 
+### 2026-11-23 — Free-entry route unwired + Nigerian classification research
+
+```yaml
+---
+ts: 2026-11-23T00:00:00Z
+agent: bmad-agent-architect (Winston) + general-purpose research subagent
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md
+  - atlas.ticket.{routes,schemas,service,models,__init__}
+  - backend/tests/ticket/test_free_entry.py (deleted)
+  - backend/tests/e2e/test_flagship_flow.py (step 10 removed)
+  - backend/tools/check_outbox_invariant.py (allowlist note)
+  - admin/src/app/(public)/{how-it-works,responsible-play}/page.tsx
+  - README.md §Legal model
+operation: created + amended
+inputs:
+  - PRD.md §1, §3.1
+  - _bmad-output/planning-artifacts/legal/counsel-engagement-brief.md §3 Q1
+  - docs/adr/ADR-002, ADR-005, ADR-009, ADR-010
+human_review:
+  reviewer: Adaeze (atlas-compliance-risk) — NOT YET PERFORMED
+  status: not-yet-reviewed
+  comments: |
+    BLOCKING. Ticket is a compliance-sensitive module (AINE-AGENTS.md §3);
+    Adaeze is a mandatory reviewer. Public regulatory copy was edited, which
+    is an AINE-AGENTS.md §6 gate (Adaeze -> Legal Counsel). Must not merge
+    without her verdict.
+notes: |
+  Founder decision (Tier 3, AINE-AGENTS.md §5) to remove the free-entry
+  route, leaving the skill question as the sole lottery-avoidance mechanism.
+  Architect advised against on the evidence and the founder reaffirmed;
+  recorded as a decision, not an omission.
+
+  Implementation is UNWIRE-ONLY. Code paths removed (POST /tickets/free,
+  issue_free, FreeEntrySlip ORM, free-entry schemas). Deliberately RETAINED:
+  the free_entry_slips table, its UNIQUE (draw_id, slip_reference) index, and
+  the 'free' member of the entry_source CHECK constraint — historical tickets
+  carry entry_source='free', published commit-reveal proofs report the
+  paid/free split (PRD §3.1), and the ADR-005 audit chain holds
+  ticket.free_transcribed entries. No migration was written. Restoring the
+  route is code-only.
+
+  Research finding that supersedes the project's legal premise: the National
+  Lottery Act 2005 was nullified by the Supreme Court of Nigeria in
+  AG Lagos v AG Federation (22 Nov 2024); lottery/gaming is now exclusively
+  a State matter. On the research's reading of the Lagos State Lotteries and
+  Gaming Authority Law 2021, "Gaming" requires only chance and a prize with
+  no payment element, and no skill or free-entry carve-out exists — so all
+  three candidate models require a State licence. PRD §1 and counsel brief
+  Q1/Q5/Q7 are framed against a void statute and need rewriting BEFORE the
+  brief is transmitted. Nigerian gaming counsel not yet engaged.
+
+  ADRs were NOT amended — ADR-001/004/005 reference the free route and
+  require the delivery-framework.md §12 amendment process through Winston.
+  PRD amendment likewise outstanding.
+
+  Follow-up in the same session: REVIEW-002 raised at docs/compliance/
+  reviews/REVIEW-002-free-entry-route-removal.md. Verdict — engineering
+  approved, posture rejected (the sole surviving mechanism is the skill
+  question, which REVIEW-001 §3.1 already rejected for real-user launch and
+  never re-approved). Its §6 escalation was actioned immediately: the public
+  responsible-play page asserted a permanent self-exclusion regime, an
+  in-app self-exclude flow, and age verification at every purchase. None
+  existed (no self_exclusions table, no closure endpoint, no purchase-time
+  age check; mobile says self-exclude lands in V1). Copy corrected to state
+  only what the platform does. "GamCare Nigeria" relabelled "GamCare (UK)"
+  — the link was always the UK site. Restoring the stronger wording is
+  gated on ADR-010 actually shipping.
+
+  CLAUDE.md local-env caveats rewritten: Zscaler resolved 2026-11-23
+  (confirmed by a clean `docker compose build backend worker`), replaced
+  with the stale-image gotcha below.
+
+  Verification: ruff clean; `make typecheck` green (mypy 75 files + admin
+  tsc); `make lint` green (flutter analyze clean); `make test` green —
+  274/274 backend (was 282, 8 free-entry tests removed) + 5/5 admin vitest;
+  ADR-002 outbox gate green. NOTE: the first `make test` of this session was
+  a FALSE GREEN — the docker backend service bakes source at build time with
+  no bind mount, and the image was ~2 months stale, so it ran code that
+  still contained the deleted route. Caught by grepping inside the
+  container. Images rebuilt and the suite re-run; the gotcha is now recorded
+  in CLAUDE.md §Local-env caveats.
+---
+```
+
+---
+
+
+### 2026-11-24 — REVIEW-002 follow-through: surface sweep, risk register, counsel brief
+
+```yaml
+---
+ts: 2026-11-24T00:00:00Z
+agent: atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - docs/compliance/reviews/REVIEW-002-free-entry-route-removal.md (Addendum A)
+  - docs/risk-register.md (R-REG-08/09/10)
+  - _bmad-output/planning-artifacts/legal/counsel-engagement-brief.md (major revision)
+  - docs/runbooks/payment-outage.md
+  - docs/VISUAL-WALKTHROUGH.md
+operation: amended
+inputs:
+  - docs/compliance/reviews/REVIEW-002 §5.2(b), §7
+  - docs/compliance/reviews/REVIEW-001 §3.1, §6.1
+  - _bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    Counsel brief must not be transmitted until the founder has read the
+    revision. Risk-register change log entry marked "pending Founder".
+notes: |
+  Discharges REVIEW-002 §7 items 2 and 8.
+
+  SURFACE SWEEP (Addendum A). No withdrawn free-route copy remains on any
+  live surface. Two live operational docs were wrong and are corrected: the
+  payment-outage runbook told on-call that the free postal route "remains
+  available" during a Paystack outage, and VISUAL-WALKTHROUGH narrated
+  free-route sections that no longer exist (screenshot-set caveat added).
+  Versioned artefacts (PRD, delivery-framework, ADR-004/005) left for the
+  §12 amendment process. Design wireframes, checkpoints, build plans, demo
+  plan and REVIEW-001 left intact as historical records — editing them to
+  match today's product would falsify the audit trail, the same objection
+  that applies to rewriting a published proof.
+
+  KEY FINDING — R-FREE-01. The free-entry route was never operable. No P.O.
+  box was ever leased; Adaeze flagged it in REVIEW-001 §6.1 on 2026-07-08
+  and it stayed open. For the whole V0.5 demo period the public surface
+  advertised a free postal route with no address to post to. This softens
+  the §2 dissent on substance (removing an inoperable route is more honest
+  than keeping it) and establishes the real pattern: consumer copy shipping
+  ahead of implementation. Three instances found this week, none caught by
+  CI. Standing requirement added (Addendum A.4) and a mechanised
+  copy-to-capability gate requested from Murat, modelled on the ADR-002
+  outbox gate.
+
+  RISK REGISTER. R-REG-08 (copy ahead of implementation), R-REG-09 (skill
+  question is sole mechanism and fails this office's own standard),
+  R-REG-10 (register's governing statute void for twelve months unnoticed)
+  — all three scored BLACK. R-FREE-01 and R-SKILL-01 had been recorded only
+  inside a Day-9 wireframe and never entered the register; Adaeze recorded
+  that as her own omission. R-REG-01/02 and §8 remain STALE pending
+  rescoring against Lagos State law — outstanding, should not wait on
+  counsel.
+
+  COUNSEL BRIEF. Substantial revision of §1, §2, Q1, Q5, Q6, Q7, §4 before
+  transmission. Q7 promoted Medium -> CRITICAL and is now to be answered
+  first (which regime governs); Q1 reframed from "is our carve-out valid"
+  to "licensable, at what cost, and is the business viable at that cost";
+  Q5 raised Medium -> HIGH (advertising an unlicensed scheme may itself be
+  an offence, and a "skill influences chance" claim may be independently
+  misleading). The brief now discloses, unprompted, that the skill question
+  would probably fail the nearest published benchmark, that ADR-010 was
+  never built, that the free route never had an address, and that the PRD
+  and delivery framework are superseded-but-unamended with §2 of the brief
+  governing on conflict. Counsel is told not to optimise toward a preferred
+  outcome because Atlas does not have one, and is invited to pause after
+  Q1/Q7 rather than bill through Q2-Q8 if the model cannot proceed.
+
+  STILL OUTSTANDING: founder review of the brief before sending; Lagos
+  gaming counsel not engaged; PRD §1/§3.1 and delivery-framework amendments
+  via §12; ADR-004/005 amendments via Winston; ADR-010 build; REVIEW-001
+  §3.1/§3.2 skill remediation; docs/compliance/skill-questions.md unwritten;
+  R-REG-01/02 and §8 rescoring.
+---
+```
+
+---
+
+
+### 2026-11-24 — Risk rescore against Lagos State law + PRD amendment proposed
+
+```yaml
+---
+ts: 2026-11-24T12:00:00Z
+agent: atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - docs/risk-register.md (§1 R-REG-01/02 restated; §8.1/§8.4 rewritten)
+  - _bmad-output/planning-artifacts/amendments/AMEND-001-prd-free-entry-route-removal.md (new)
+operation: amended + created
+inputs:
+  - _bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md
+  - _bmad-output/planning-artifacts/delivery-framework.md §12
+  - docs/compliance/reviews/REVIEW-001 §3.1, §6.1; REVIEW-002 Addendum A
+human_review:
+  reviewer: John (bmad-agent-pm) as PRD owner, then S1408661 (Founder/EL)
+  status: not-yet-reviewed
+  comments: |
+    AMEND-001 is a PROPOSAL. The PRD is unchanged on disk. Per
+    delivery-framework.md §12 step 2 the owner agent reviews before
+    anything is applied.
+notes: |
+  RISK RESCORE. R-REG-01 restated: was "NLRC classifies Atlas as a lottery",
+  now "Atlas operates inside a State gaming perimeter without a licence" —
+  likelihood M -> H, stays BLACK. Mitigation (3) from the original row was
+  STRUCK: mechanic design (free-route equality, substantive skill question)
+  is legally inert if the governing definition needs only chance and a
+  prize. R-REG-02 was inverted and is restated: Lagos is the FIRST licence,
+  not a second, and per-State licensing may reduce V1's addressable market
+  from Nigeria to Lagos — which invalidates any market sizing built on
+  "Nigeria only". Likelihood M -> H.
+
+  §8 Plan B rewritten. The old §8.1 treated a federal NLRC licence as its
+  primary fallback; that path no longer exists and is struck, as is
+  "redesign to strengthen the prize-competition case". Lagos State licensing
+  is promoted from option 3 to option 1, with the reported ₦250-400m year-one
+  cost flagged as the figure that decides whether Atlas exists in its current
+  form. A promotional-competition permit (counsel Q7.4) is identified as the
+  single highest-leverage unknown in the engagement — everything else should
+  wait on that answer. "Abandon Nigeria for Ghana/Kenya/SA" rises in the
+  order but is flagged as an unknown rather than an escape hatch: no
+  regulatory research exists for any of those markets, and the Nigerian
+  position was also assumed benign for five months. §8.4 now records
+  directors' personal criminal exposure (founder is sole director) as a
+  disclosure due BEFORE any launch decision, and notes that advertising
+  exposure may precede operating exposure. §8.2/§8.3 unaffected — AML and
+  NDPA obligations do not turn on classification.
+
+  PRD AMENDMENT. AMEND-001 proposes rewriting PRD §1 (two mechanics -> one,
+  with the removed one recorded rather than erased), the §1 Nigerian legal
+  caveat (reframed off the void NLA 2005 onto Lagos State law, and extended
+  to gate MARKETING spend as well as code, since promoting an unlicensed
+  scheme may itself be an offence), and §3.1 (free-route bullets struck;
+  entry_source documented as 'paid' | 'free', correcting a long-standing
+  drift where the PRD said 'postal_free' and the schema always said 'free';
+  retention of the table and enum value recorded as deliberate).
+
+  §12 BREACH RECORDED. The hard rule is "no in-flight code change
+  retro-justifies an artefact change — spec changes first, then code
+  follows". The code shipped 2026-11-23; this amendment is the spec catching
+  up. Recorded in AMEND-001 §0 rather than quietly retro-fitted. No remedy
+  proposed beyond the record — reverting working code to restore process
+  order would be theatre — but the next change of this class goes spec-first.
+---
+```
+
+---
+
+
+### 2026-11-24 — ADR-010 Phase A: self-exclusion built and enforced
+
+```yaml
+---
+ts: 2026-11-24T15:00:00Z
+agent: bmad-agent-architect (Winston) + bmad-agent-dev (Amelia)
+session: claude-code
+artefact:
+  - docs/adr/ADR-010 (amendment 2026-11-24)
+  - _bmad-output/implementation-artifacts/adr-010-self-exclusion-build-plan.md
+  - backend/migrations/versions/20261124_0900_0012_self_exclusions.py
+  - atlas.identity.self_exclusion (new module)
+  - atlas.identity.{models,schemas,routes,session_service}
+  - atlas.ticket.{service,routes}; atlas.skill.{service,routes}
+  - backend/tests/identity/test_self_exclusion.py (13 tests)
+  - admin/src/app/(public)/responsible-play/page.tsx
+operation: created + amended
+inputs:
+  - docs/adr/ADR-010; ADR-007 (unbuilt — the blocker)
+  - docs/compliance/reviews/REVIEW-002 §6, §7 item 3
+  - docs/risk-register.md R-REG-08
+human_review:
+  reviewer: Adaeze (atlas-compliance-risk) + Murat (bmad-tea)
+  status: not-yet-reviewed
+  comments: |
+    Identity is compliance-sensitive (AINE-AGENTS.md §3) — Adaeze is a
+    mandatory reviewer and consumer copy changed again. NOT MERGED.
+notes: |
+  ADR-010 could not be built as written: its primary enforcement point is
+  "at KYC submission" and there is no KYC module (ADR-007 approved, never
+  built). BVN is collected nowhere — only an unused bvn_pepper in config.
+  Amended to two phases; Phase A ships, Phase B blocked on ADR-007.
+
+  SPEC FIRST THIS TIME. The ADR-010 amendment was written and committed to
+  the ADR before any code, correcting the §12 sequencing failure recorded
+  in AMEND-001 §0.
+
+  PHASE A DELIVERED. Migration 0012 creates self_exclusions keyed on
+  user_id (NOT bvn_hash as the base ADR specified — nothing to key on),
+  with bvn_hash nullable+unique so Phase B is a backfill, not a migration
+  of a live table. New sole-writer module atlas.identity.self_exclusion.
+  exclude() is one transaction: registry row -> users.status='closed' ->
+  revoke every session -> audit, returning (row, sessions_revoked) so the
+  API reports what actually happened rather than guessing.
+
+  FOUND FREE: users.status already permitted 'closed' and nothing had ever
+  set it; session_service already refused any user whose status != 'active'.
+  So ADR-010's login enforcement needed no new login code. This module is
+  the first writer of 'closed' since migration 0001.
+
+  DEFECT IN THE BASE ADR CLOSED. The ADR named KYC, registration and login
+  as enforcement points and omitted PURCHASE entirely — a closed user
+  holding a live session could have bought a ticket. Check added to
+  ticket.service.issue_paid (service layer, because the webhook reaches it
+  without the route) and to skill.service.next_question, plus a route-level
+  403 pre-check so an excluded user never sees a checkout page.
+
+  WALLET REFUND DELIBERATELY NOT IMPLEMENTED. ADR-010 requires refund to
+  the originating method with escheatment fallback. There is no Paystack
+  refund call and docs/compliance/escheatment-policy.md was never written.
+  Phase A HOLDS the balance and surfaces it to support. Emitting a refund
+  the system cannot perform is the exact defect the amendment corrects.
+  Adaeze to confirm holding is acceptable; escheatment policy is hers and
+  gates Phase B.
+
+  COPY. responsible-play updated to the Phase A truth and only that: the
+  account can be closed permanently (true, enforced), there is no in-app
+  switch yet (true — A5 unbuilt, support is the route today), and closing
+  one account does not stop a new one (true — needs BVN/KYC). The
+  withdrawn "a fresh account cannot bypass it" sentence stays withdrawn.
+  test_phase_a_does_not_block_reregistration pins that limit so it fails
+  loudly if Phase B lands without the copy being updated in the same change.
+
+  VERIFICATION: 287/287 backend tests pass (274 -> 287, +13), both natively
+  and through a rebuilt docker image via `make test`; ruff clean; mypy src
+  clean (76 files); ADR-002 outbox gate green (62 files, 29 allowlisted,
+  self_exclusion.activated allowlisted as deferred); CI identity-table
+  boundary grep clean; admin lint, tsc and vitest green.
+
+  NOT DONE: A5 mobile settings flow, A6 admin read-only exclusion list.
+  Phase A is therefore API-complete but not yet self-service — the copy
+  says so rather than implying a control that does not exist.
+
+  DEPLOY: not possible. There is no deploy pipeline and no production
+  environment — .github/workflows/ contains only ci.yaml with no deploy
+  job, infrastructure/ holds demo scripts only, and the Makefile has no
+  deploy target. Managed-platform commitment was deferred by founder
+  decision during the V0.5 demo-first pivot (risk register change log,
+  2026-07-02). PRD §1 would block a real-money deploy regardless: counsel
+  has not been engaged.
+---
+```
+
+---
+
+
+### 2026-11-24 — Phase A completed (A5 mobile, A6 admin) + compliance approval
+
+```yaml
+---
+ts: 2026-11-24T17:00:00Z
+agent: bmad-agent-dev (Amelia) + atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - mobile/lib/features/account/self_exclusion_screen.dart (new)
+  - mobile/lib/features/identity/identity_api.dart
+  - mobile/lib/features/home/home_screen.dart
+  - admin/src/app/(admin)/admin/self-exclusions/page.tsx (new)
+  - admin/src/design/components/Sidebar.tsx
+  - atlas.identity.{routes,schemas} — GET /api/v1/self-exclusions
+  - backend/tests/identity/test_self_exclusion.py (17 tests)
+  - admin/src/app/(public)/responsible-play/page.tsx
+  - docs/compliance/reviews/REVIEW-002 (Addendum B)
+operation: created + amended + reviewed
+inputs:
+  - docs/adr/ADR-010 (amendment 2026-11-24)
+  - _bmad-output/implementation-artifacts/adr-010-self-exclusion-build-plan.md A5/A6
+human_review:
+  reviewer: Adaeze (atlas-compliance-risk) — COMPLETE, approved
+  status: approved
+  comments: |
+    REVIEW-002 Addendum B. First change this week approved without a
+    standing objection. Murat sign-off still outstanding. Founder/EL
+    approval still required for merge.
+notes: |
+  A5 + A6 close out ADR-010 Phase A, which is now self-service rather than
+  API-only.
+
+  A5 — mobile. New SelfExclusionScreen reached from an underlined text
+  button on the account panel, replacing the "Self-exclusion + profile
+  settings land in V1" placeholder. Typed EXCLUDE + login_mfa OTP, both
+  re-checked server-side. The limitation panel ("What this does not do")
+  sits ABOVE the confirmation field, not below: no retention offer, no
+  softer alternative, and a line pointing at independent support as more
+  useful than the button itself.
+
+  A6 — admin. GET /api/v1/self-exclusions, superadmin-gated, read-only.
+  New admin page states the Phase A limitation where the operator reads
+  it. test_registry_has_no_mutation_verbs asserts DELETE/PATCH/PUT are
+  absent, so adding an un-exclude control is a failing test rather than a
+  code-review catch.
+
+  SWEEP MISS CORRECTED. The Addendum A sweep missed the sidebar link to
+  /admin/free-entries — my grep matched "free entry"/"free-entry" but not
+  "free-entries". Removed, and a Self-exclusions link added in its place.
+
+  COMPLIANCE REVIEW. Adaeze approved the amendment, implementation,
+  enforcement coverage, copy and admin surface, and discharged REVIEW-002
+  §7 item 3. She recorded that the purchase-path enforcement gap was a
+  defect she had not caught in REVIEW-001 or REVIEW-002 §6, and singled out
+  test_phase_a_does_not_block_reregistration — a test asserting a
+  LIMITATION, designed to fail when Phase B lands — as the pattern she
+  wants generalised from Addendum A.4.
+
+  HER TWO CONDITIONS, BOTH CLOSED IN-SESSION. (B.4) the page still said
+  there was no in-app switch, which A5 had just made false — understating a
+  capability, the opposite of this week's other defects, but corrected
+  anyway because the standing requirement has no size threshold. (B.3) a
+  user closing an account with a balance was told nothing about it; both
+  the web page and the mobile screen now state the balance is held and paid
+  out by support, not forfeited. The mobile placement was deliberate: the
+  decision is taken there.
+
+  VERIFICATION: 291/291 backend tests (287 -> 291), green natively and via
+  `make test` on a rebuilt image; ruff clean; make typecheck clean (mypy 76
+  files + admin tsc); make lint clean (flutter analyze no issues, ESLint
+  clean); ADR-002 outbox gate green; CI identity-boundary grep clean.
+
+  STILL OPEN: Murat sign-off; docs/compliance/skill-questions.md and
+  escheatment-policy.md (both Adaeze, overdue); R-REG-09 (skill question
+  remains sole classification mechanism, still rejected for real-user
+  launch); no per-user cap or spend ceiling (founder decision); Phase B
+  blocked on ADR-007. Deploy remains impossible — no pipeline, no
+  environment, counsel not engaged.
+---
+```
+
+---
+
+
+### 2026-11-26 — Test review TR-001: P0 enforcement gap found and closed
+
+```yaml
+---
+ts: 2026-11-26T12:00:00Z
+agent: bmad-tea (Murat)
+session: claude-code
+artefact:
+  - _bmad-output/test-artifacts/test-reviews/TR-001-adr-010-phase-a.md
+  - backend/tests/identity/test_self_exclusion.py
+operation: reviewed + amended
+inputs:
+  - PR #15; docs/adr/ADR-010 (amendment 2026-11-24)
+  - docs/compliance/reviews/REVIEW-002 Addendum A.4, B
+  - TEA knowledge: test-quality, test-priorities-matrix, risk-governance
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    Gate: CONCERNS — approved for merge. Clears the Murat sign-off that
+    Adaeze's REVIEW-002 Addendum B approval was conditional on. EL
+    approval still outstanding.
+notes: |
+  P0 GAP FOUND AND CLOSED. Self-exclusion is regulatory compliance, so P0
+  on the priorities matrix. The service-layer check in issue_paid was
+  tested; the 403 pre-check on POST /tickets/purchase was NOT. Deleting
+  that block left all 291 tests green — an enforcement path with no
+  signal. Risk P2 x I3: an excluded user reaches a live checkout and a
+  payment intent is created against a closed account. Two tests added
+  (TestPurchaseRouteEnforcement), plus one for the same gap on
+  GET /draws/{id}/skill-questions/next.
+
+  MY OWN FIRST TEST WAS TOO WEAK, AND I REWROTE IT. The initial version
+  posted random draw/entitlement ids. It went red on mutation — but with
+  404, because it fell through to the draw lookup. A red for the wrong
+  reason would also fire on an unrelated routing change and never
+  demonstrates the property. Rewritten to issue an otherwise-VALID
+  purchase (real sales_open draw, real entitlement earned before
+  exclusion). Mutation now yields `assert 201 == 403` — without the guard,
+  an excluded user successfully buys a ticket. Also asserts no
+  payment_intents row is created. Principle: a test going red is not the
+  same as a test proving something; check what the red says.
+
+  COMMENDED: enforcement tested at the service layer because the payment
+  webhook reaches issue_paid without the route;
+  test_phase_a_does_not_block_reregistration asserting a LIMITATION built
+  to fail when Phase B lands (the mechanised copy-to-capability check
+  Adaeze asked for in Addendum A.4 — generalise it); absence-of-capability
+  tests for the missing un-exclude path; idempotency asserted by counting
+  side effects (0 sessions revoked, no second audit event) rather than
+  just not erroring.
+
+  DELETED COVERAGE AUDITED. test_free_entry.py's 8 tests went with the
+  route. No orphaned coverage — paid-ticket ticket_number monotonicity
+  survives in test_purchase_flow.py; the mixed paid/free numbering case
+  died with the feature, correctly.
+
+  OPEN, NON-BLOCKING: no E2E exclusion path (P1); no widget test for
+  SelfExclusionScreen, compliance-critical UI with zero coverage while
+  the pattern already exists in password_screen_test.dart (P1); test file
+  482 lines vs <300 DoD, split along the existing class seam.
+
+  PRE-EXISTING DEBT RECORDED, NOT THIS PR'S: _register_login
+  reimplemented across 10 test files (this change added the tenth);
+  phone generation uses `uuid4().int % 1_000_000` — random data that can
+  collide, the exact bug class behind W8's three flaky tests, held
+  harmless today only by function-scoped truncation; admin UI has 5 tests
+  in total.
+
+  VERIFICATION: 293/293 backend (291 -> 293) + 5/5 admin, green natively
+  and via `make test` on a rebuilt image. No flakes across repeated runs.
+---
+```
+
+---
+
+
+### 2026-11-26 — AMEND-001 owner review (John): approved with required additions
+
+```yaml
+---
+ts: 2026-11-26T13:00:00Z
+agent: bmad-agent-pm (John)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/amendments/AMEND-001-prd-free-entry-route-removal.md
+operation: reviewed
+inputs:
+  - PRD.md §1, §2, §3.1, §3.2, §10
+  - docs/adr/ADR-010 (amendment 2026-11-24)
+  - docs/compliance/reviews/REVIEW-002 §6.1
+  - docs/risk-register.md R-REG-02
+  - _bmad-output/planning-artifacts/research/nigerian-draw-classification-research-2026-11-23.md
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    §12 step 2 complete — PRD owner has reviewed. Passes to founder as EL
+    approver. PRD still UNCHANGED on disk; AMEND-001 is not applied.
+notes: |
+  VERDICT: approved subject to four additional sections being incorporated.
+  The proposal amended two sections of a document wrong in five places;
+  applying it as drafted would have left the PRD internally inconsistent —
+  §1 stating one mechanic while §2 still promised users a free entry route
+  and §3.2 still promised a protection that does not exist.
+
+  REQUIRED ADDITIONS, now drafted into AMEND-001 §6:
+  - §3.2 was untouched and is now false. It reads "a user can self-exclude
+    permanently from settings. Re-registration with the same BVN is
+    blocked." ADR-010 cites §3.2 as its source requirement; its amendment
+    split delivery, so sentence one is shipped and sentence two is blocked
+    on ADR-007 with no date. Rewritten as two explicit bullets — Phase A
+    shipped, Phase B NOT DELIVERED — so the spec states the boundary that
+    test_phase_a_does_not_block_reregistration enforces. This is the
+    omission that mattered: the proposal corrected a removed feature while
+    leaving a never-built protection described as real, which is the exact
+    defect that produced REVIEW-002 §6.
+  - §2 consumer bullet still sells "Enter for free via a documented
+    free-entry route" as V1 scope.
+  - §2 operator bullet still lists "max entries" in draw configuration;
+    entries_cap was never enforced and the founder decided against caps.
+  - §10 Phase 0 exit still requires "Free-entry route operationalised:
+    P.O. box leased" — a criterion that can never be met, sitting in a
+    checklist nobody reads until someone tries to close Phase 0. Replaced
+    with "Nigerian gaming counsel engaged and Q7/Q1 answered".
+
+  DISAGREEMENT RECORDED. The proposal treated market sizing as "not a PRD
+  section". Rejected: "Nigeria only" is a §2 scope statement, §3 is
+  written against it, and §7's V2 plan depends on it. R-REG-02 says
+  per-State licensing may reduce V1's market to Lagos. Tracked as
+  AMEND-002-pending, gated on counsel Q7.2.
+
+  PRODUCT QUESTION RAISED, OUTSIDE THE AMENDMENT PROCESS. PRD §1 is "The
+  product decision" and its rationale was that two mechanics kept Atlas
+  outside gambling regulation. One is removed; the other is legally inert
+  in Nigeria on current research; the removed one would have been inert
+  too. The decision now rests on nothing that survives the governing law.
+  John's recommendation: do not apply AMEND-001 or build further product
+  against this PRD until counsel answers Q7 and Q1 — amending §1 is
+  accurate bookkeeping, but the premise is pending a verdict from a firm
+  that has not been engaged. "The smallest thing that validates the
+  assumption here is not a feature. It is an email to a Lagos gaming firm."
+---
+```
+
+---
+
+
+### 2026-11-26 — Skill question removed; Atlas stops claiming a carve-out
+
+```yaml
+---
+ts: 2026-11-26T16:00:00Z
+agent: bmad-agent-pm (John) + bmad-agent-dev (Amelia) + atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/amendments/AMEND-003-prd-skill-question-removal.md (new)
+  - docs/compliance/reviews/REVIEW-003-skill-question-removal.md (new)
+  - docs/risk-register.md (R-REG-09 closed, R-REG-11 opened)
+  - atlas.skill (unwired; routes.py deleted), atlas.ticket.{service,routes,schemas}
+  - atlas.payment.service (webhook), atlas.main (router unregistered)
+  - mobile: features/tickets/entry_purchase_screen.dart (new), features/skill (deleted)
+  - admin: how-it-works, responsible-play, (public)/layout, Sidebar
+  - infrastructure/scripts/seed_v0_5.py
+operation: created + amended
+inputs:
+  - counsel-engagement-brief Q1.5, Q1.6
+  - research/nigerian-draw-classification-research-2026-11-23.md
+  - REVIEW-001 §2.1, §3.1; REVIEW-002
+human_review:
+  reviewer: Adaeze — COMPLETE, approved without reservation (REVIEW-003)
+  status: approved
+  comments: |
+    Founder/EL approval still required. AMEND-001 and AMEND-003 both
+    remain PROPOSED — the PRD is unchanged on disk.
+notes: |
+  FOUNDER DECISIONS: skill question removed; free entry route confirmed
+  not returning; State gaming licence pursued separately.
+
+  Atlas now relies on NO mechanic to sit outside gambling regulation. It
+  is a paid prize draw intending to operate under a State licence it does
+  not yet hold. More coherent than what preceded it — the research
+  indicates both mechanics were legally inert in Nigeria, so Atlas was
+  paying conversion friction and postal operations for protection that
+  probably did not exist.
+
+  SPEC FIRST AGAIN. AMEND-003 was written before any code.
+
+  CODE. Purchase is now gated only on an open draw and a non-excluded
+  buyer. Removed: PurchaseTicketRequest.entitlement_id, check_entitlement,
+  _validate_and_consume_entitlement, the three Entitlement* errors, the
+  entitlement arg to issue_paid, the entitlement_id in payment metadata
+  and the webhook read of it, the skill router registration and
+  skill/routes.py. UNWIRED NOT DELETED: skill_questions,
+  skill_question_options and skill_question_attempts are retained — the
+  ADR-005 audit chain carries skill_question.* events whose subject_id
+  references attempt rows. No migration. Seed script's question pool is
+  now a documented no-op.
+
+  MOBILE. SkillQuestionScreen WAS the purchase flow, so it was replaced
+  rather than deleted: new EntryPurchaseScreen shows the prize, the price
+  and the non-refundable terms, then opens Paystack checkout. Golden
+  renamed skill-question -> entry-purchase and regenerated (the screen
+  genuinely changed; regenerating is correct, not a workaround).
+
+  COPY — the part Adaeze judged. With no mechanic left, "prize
+  competition" became a bare legal assertion by the party it benefits.
+  Per REVIEW-001 §2.1 Atlas must not arbitrate its own classification, so
+  every classification claim was replaced with a mechanic or a verifiable
+  property: "A prize competition, not a lottery" -> "Every draw is
+  provably fair — and you can check it yourself"; "Provably fair prize
+  competitions · Nigeria" -> "Provably fair draws · Nigeria". The skill
+  question section is gone. Copy bans on lottery/raffle/luck UNCHANGED
+  and still binding.
+
+  RISK. R-REG-09 CLOSED — no skill question remains to fail a standard;
+  docs/compliance/skill-questions.md is CANCELLED, not overdue (Adaeze's
+  own late artefact, now unnecessary). R-REG-11 OPENED ⚫ — the entire
+  legal basis is now a single licence Atlas does not hold, with no
+  fallback if refused, delayed or priced out. Adaeze: "more honest and
+  more concentrated. I would not trade back."
+
+  UNCHANGED: PRD §1 hard prerequisite, extended by AMEND-001 §2.2 to bar
+  public marketing spend as well as a real payment rail. Removing the
+  mechanics does not bring launch closer; it clarifies what launch
+  depends on.
+
+  VERIFICATION: 267/267 backend (293 -> 267; 26 entitlement/skill tests
+  removed with the feature) + 5/5 admin + 42/42 mobile, green natively and
+  via `make test` on a rebuilt image. ruff (src tests), mypy src, ESLint,
+  tsc, flutter analyze all clean. ADR-002 outbox gate green.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

@@ -2,6 +2,9 @@
 
 Covers the full ticket-purpose payment flow end-to-end plus the
 ticket_number monotonicity contract.
+
+The skill-question entitlement gate was removed 2026-11-26 (AMEND-003);
+purchase is now gated only on an open draw and a non-excluded buyer.
 """
 
 from __future__ import annotations
@@ -24,11 +27,6 @@ from atlas.draw import crypto as seed_crypto
 from atlas.draw.models import Draw
 from atlas.identity import mailhog_sender
 from atlas.payment.providers import paystack_fixtures
-from atlas.skill.models import (
-    SkillQuestion,
-    SkillQuestionAttempt,
-    SkillQuestionOption,
-)
 from atlas.ticket.models import Ticket
 from atlas.wallet import queries as wallet_queries
 from atlas.wallet import service as wallet_service
@@ -69,19 +67,6 @@ async def _seed_draw(session: AsyncSession, *, ticket_price: int = 500_00) -> Dr
         server_seed_encrypted=seed_crypto.encrypt_server_seed(seed),
     )
     session.add(draw)
-    q = SkillQuestion(prompt="Q1")
-    session.add(q)
-    await session.flush()
-    session.add(
-        SkillQuestionOption(
-            question_id=q.id, option_text="correct", is_correct=True, display_order=0
-        )
-    )
-    session.add(
-        SkillQuestionOption(
-            question_id=q.id, option_text="wrong", is_correct=False, display_order=1
-        )
-    )
     await session.commit()
     return draw
 
@@ -128,25 +113,6 @@ async def _register_login(
     return user_id, email, login.json()["access_token"]
 
 
-async def _pass_skill_check(
-    client: AsyncClient, draw_id: uuid.UUID, token: str
-) -> uuid.UUID:
-    """Answer correctly and return the entitlement id (= attempt_id)."""
-    next_resp = await client.get(
-        f"/api/v1/draws/{draw_id}/skill-questions/next",
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    body = next_resp.json()
-    correct_id = next(o["id"] for o in body["options"] if o["text"] == "correct")
-    answer = await client.post(
-        f"/api/v1/skill-questions/attempts/{body['attempt_id']}/answer",
-        json={"option_id": correct_id},
-        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-    )
-    assert answer.status_code == 200, answer.text
-    return uuid.UUID(body["attempt_id"])
-
-
 class TestPurchaseHappyPath:
     async def test_returns_checkout_url_but_no_ticket_yet(
         self,
@@ -156,11 +122,10 @@ class TestPurchaseHappyPath:
     ) -> None:
         draw = await _seed_draw(db_session)
         user_id, _, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
 
         response = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         assert response.status_code == 201, response.text
@@ -186,11 +151,10 @@ class TestPurchaseHappyPath:
     ) -> None:
         draw = await _seed_draw(db_session)
         user_id, email, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
 
         purchase = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         vendor_ref = purchase.json()["vendor_reference"]
@@ -237,37 +201,6 @@ class TestPurchaseHappyPath:
             db_session, account_id=operator_revenue.id
         ) == draw.ticket_price_minor - expected_fee
 
-    async def test_entitlement_marked_consumed_after_webhook(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        _stub_mailhog: list[tuple[str, str, str]],
-    ) -> None:
-        draw = await _seed_draw(db_session)
-        _, email, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
-
-        purchase = await client.post(
-            "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
-            headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-        )
-        vendor_ref = purchase.json()["vendor_reference"]
-        body = json.dumps(
-            paystack_fixtures.charge_success_event(
-                reference=vendor_ref, amount_minor=draw.ticket_price_minor, email=email
-            )
-        ).encode("utf-8")
-        await client.post(
-            "/api/v1/payments/webhooks/paystack",
-            content=body,
-            headers={"x-paystack-signature": _sign(body), "Content-Type": "application/json"},
-        )
-
-        attempt = await db_session.get(SkillQuestionAttempt, entitlement)
-        assert attempt is not None
-        assert attempt.consumed_at is not None
-
     async def test_webhook_replay_no_duplicate_ticket(
         self,
         client: AsyncClient,
@@ -276,11 +209,10 @@ class TestPurchaseHappyPath:
     ) -> None:
         draw = await _seed_draw(db_session)
         user_id, email, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
 
         purchase = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         vendor_ref = purchase.json()["vendor_reference"]
@@ -313,73 +245,7 @@ class TestPurchaseHappyPath:
         assert ledger_count == 4
 
 
-class TestEntitlementValidation:
-    async def test_unknown_entitlement_returns_404(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        _stub_mailhog: list[tuple[str, str, str]],
-    ) -> None:
-        draw = await _seed_draw(db_session)
-        _, _, token = await _register_login(client, _stub_mailhog)
-        response = await client.post(
-            "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(uuid.uuid4())},
-            headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-        )
-        assert response.status_code == 404
-        assert response.json()["detail"]["code"] == "entitlement_not_found"
-
-    async def test_cross_user_entitlement_returns_403(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        _stub_mailhog: list[tuple[str, str, str]],
-    ) -> None:
-        draw = await _seed_draw(db_session)
-        _, _, token_a = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token_a)
-        _, _, token_b = await _register_login(client, _stub_mailhog)
-
-        response = await client.post(
-            "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
-            headers={"Authorization": f"Bearer {token_b}", "Idempotency-Key": str(uuid.uuid4())},
-        )
-        assert response.status_code == 403
-        assert response.json()["detail"]["code"] == "entitlement_forbidden"
-
-    async def test_wrong_answer_entitlement_returns_409(
-        self,
-        client: AsyncClient,
-        db_session: AsyncSession,
-        _stub_mailhog: list[tuple[str, str, str]],
-    ) -> None:
-        """Answer wrong → attempt has no entitlement_expires_at → attempt to
-        redeem it should fail with entitlement_not_correct."""
-        draw = await _seed_draw(db_session)
-        _, _, token = await _register_login(client, _stub_mailhog)
-        # Answer wrong.
-        next_resp = await client.get(
-            f"/api/v1/draws/{draw.id}/skill-questions/next",
-            headers={"Authorization": f"Bearer {token}"},
-        )
-        body = next_resp.json()
-        wrong_id = next(o["id"] for o in body["options"] if o["text"] != "correct")
-        await client.post(
-            f"/api/v1/skill-questions/attempts/{body['attempt_id']}/answer",
-            json={"option_id": wrong_id},
-            headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-        )
-
-        response = await client.post(
-            "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": body["attempt_id"]},
-            headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
-        )
-        assert response.status_code == 409
-        assert response.json()["detail"]["code"] == "entitlement_not_correct"
-
+class TestDrawStateValidation:
     async def test_draw_not_open_returns_409(
         self,
         client: AsyncClient,
@@ -390,9 +256,8 @@ class TestEntitlementValidation:
 
         draw = await _seed_draw(db_session)
         _, _, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
 
-        # Close the draw between skill-check and purchase.
+        # Close the draw before purchase.
         await db_session.execute(
             update(Draw).where(Draw.id == draw.id).values(state="sales_closed")
         )
@@ -400,7 +265,7 @@ class TestEntitlementValidation:
 
         response = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         assert response.status_code == 409
@@ -419,10 +284,9 @@ class TestTicketNumberMonotonicity:
         emails: list[str] = []
         for _ in range(3):
             _, email, token = await _register_login(client, _stub_mailhog)
-            entitlement = await _pass_skill_check(client, draw.id, token)
             purchase = await client.post(
                 "/api/v1/tickets/purchase",
-                json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+                json={"draw_id": str(draw.id)},
                 headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
             )
             vendor_refs.append(purchase.json()["vendor_reference"])
@@ -460,10 +324,9 @@ class TestGetMyTickets:
         _, email_b, token_b = await _register_login(client, _stub_mailhog)
 
         for token, email in ((token_a, email_a), (token_b, email_b)):
-            entitlement = await _pass_skill_check(client, draw.id, token)
             purchase = await client.post(
                 "/api/v1/tickets/purchase",
-                json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+                json={"draw_id": str(draw.id)},
                 headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
             )
             vendor_ref = purchase.json()["vendor_reference"]
@@ -498,10 +361,9 @@ class TestAuditChain:
     ) -> None:
         draw = await _seed_draw(db_session)
         _, email, token = await _register_login(client, _stub_mailhog)
-        entitlement = await _pass_skill_check(client, draw.id, token)
         purchase = await client.post(
             "/api/v1/tickets/purchase",
-            json={"draw_id": str(draw.id), "entitlement_id": str(entitlement)},
+            json={"draw_id": str(draw.id)},
             headers={"Authorization": f"Bearer {token}", "Idempotency-Key": str(uuid.uuid4())},
         )
         vendor_ref = purchase.json()["vendor_reference"]
@@ -524,8 +386,6 @@ class TestAuditChain:
         # Post-webhook chain includes the ticket-sale ledger event and
         # the ticket.issued event, then fee, then payment.confirmed.
         for expected in (
-            "skill_question.issued",
-            "skill_question.answered_correct",
             "payment.intent_created",
             "wallet.ticket_sale_recorded",
             "ticket.issued",

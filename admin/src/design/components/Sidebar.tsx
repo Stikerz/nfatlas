@@ -39,7 +39,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Draws', href: '/admin/draws' },
       { label: 'Tickets', href: '/admin/tickets' },
-      { label: 'Free entries', href: '/admin/free-entries' },
       { label: 'Claims', href: '/admin/claims' },
     ],
   },
@@ -47,6 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'REVIEW',
     items: [
       { label: 'Audit log', href: '/admin/audit-log' },
+      { label: 'Self-exclusions', href: '/admin/self-exclusions' },
       { label: 'Users', href: '/admin/users' },
       { label: 'Compliance', href: '/admin/compliance' },
     ],
@@ -54,7 +54,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'SETTINGS',
     items: [
-      { label: 'Skill questions', href: '/admin/skill-questions' },
       { label: 'V0.5 tools', href: '/admin/seed-tools' },
     ],
   },
@@ -105,7 +104,7 @@ export function AdminSidebar() {
                   {item.href ? (
                     // `typedRoutes` cannot verify these statically: several
                     // NAV_GROUPS targets (tickets, claims, users, compliance,
-                    // skill-questions, seed-tools) are planned surfaces with no
+                    // seed-tools) are planned surfaces with no
                     // page.tsx yet, so they are not in the generated Route union.
                     <Link href={item.href as Route}>{inner}</Link>
                   ) : (
