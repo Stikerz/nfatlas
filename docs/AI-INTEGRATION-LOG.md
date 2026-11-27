@@ -1291,6 +1291,69 @@ notes: |
   outcome. Fourth defect this month in the same family — a documented
   behaviour the system did not exhibit — but the first where the ADR was
   right and the implementation drifted, rather than copy overclaiming.
+### 2026-11-27 — AMEND-001 and AMEND-003 applied to the PRD
+
+```yaml
+---
+ts: 2026-11-27T13:00:00Z
+agent: bmad-agent-pm (John)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/prds/prd-nf-atlas-2026-06-29/PRD.md
+  - _bmad-output/planning-artifacts/amendments/AMEND-001 (status -> APPLIED)
+  - _bmad-output/planning-artifacts/amendments/AMEND-003 (status -> APPLIED)
+operation: amended
+inputs:
+  - AMEND-001 (owner review 2026-11-26), AMEND-003
+  - docs/compliance/reviews/REVIEW-002, REVIEW-003, REVIEW-004
+  - research/nigerian-draw-classification-research-2026-11-23.md
+human_review:
+  reviewer: S1408661 (Founder / Engineering Lead) — APPROVED
+  status: approved
+  comments: |
+    Founder instruction "update the prd that describes what no longer
+    exist" taken as the EL approval that delivery-framework §12 step 2
+    was waiting on. Owner review was John's, 2026-11-26.
+notes: |
+  §12 step 3 complete for both amendments. §12 step 4 is this entry.
+
+  SECTIONS APPLIED: §1 product decision (both mechanics struck through,
+  not deleted — the PRD records the decision rather than pretending the
+  mechanics were never specified); §1 Nigerian legal caveat (rewritten off
+  the void NLA 2005 onto Lagos State law, and extended to gate MARKETING
+  spend as well as a real payment rail); §2 consumer and operator bullets;
+  §3.1 retitled "Draw mechanics" with the retention rule for entry_source
+  'free', free_entry_slips and skill_question_* made explicit; §3.2
+  self-exclusion split into Phase A shipped / Phase B NOT DELIVERED; §10
+  Phase 0 exit criteria.
+
+  SWEPT BEYOND THE NAMED SECTIONS. The amendments named seven sections;
+  the PRD described the removed features in eleven more. Also corrected:
+  §2 "mobile-first prize competition platform"; §2 success criterion 2
+  ("holds up under NLRC scrutiny" — the NLRC has no national licensing
+  authority); §3.3 skill-question resume window; §3.3 ticket-issue
+  preconditions (now payment + open draw + not self-excluded); §4 Ticket
+  module scope and module-ownership reviewer note; §10 Phase 0 counsel
+  criterion and beta-phase flows; §11 open questions 1, 4 and 5 (4 and 5
+  closed outright). Leaving these would have produced exactly the
+  half-corrected specification John warned about in his owner review §1.
+
+  CORRECTION TO AMEND-001'S OWN TEXT, caught while applying it. The §3.2
+  wording proposed in §6.3 said closure is enforced "at login, at ticket
+  purchase and at skill-question issue". That third point no longer
+  exists — AMEND-003 unwired the skill module, so the check is
+  unreachable. The applied text names login and ticket purchase only. An
+  amendment drafted before a sibling amendment landed described a state
+  that no longer held by the time it was applied.
+
+  STILL OUTSTANDING, deliberately not in this change:
+  - delivery-framework.md §§49-52, 122, 131, 260, 321, 394 — free-route
+    operationalisation and Legal-Counsel-approved free-entry copy in phase
+    gates. Needs its own amendment (Winston + John).
+  - ADR-004 §51 and ADR-005 §67 free-entry references — Winston's, per
+    CLAUDE.md's rule against retroactive ADR edits.
+  - AMEND-002 (V1 market scope: "Nigeria only" vs per-State licensing),
+    gated on counsel Q7.2.
 ---
 ```
 

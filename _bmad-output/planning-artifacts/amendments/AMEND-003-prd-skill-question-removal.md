@@ -6,7 +6,7 @@
 **Owner agent:** 📋 John (PRD owner — self-reviewed; see §5 on why that is acceptable here)
 **Mandatory reviewer:** ⚖️ Adaeze (regulatory copy, `AINE-AGENTS.md §6`)
 **Approver:** S1408661 (Founder / EL)
-**Status:** PROPOSED. PRD unchanged on disk.
+**Status:** **APPLIED 2026-11-27.** Founder approved as EL; Adaeze's review is REVIEW-003. The PRD now reflects this amendment.
 **Supersedes in part:** AMEND-001 §2.1 (which retained the skill question as the one surviving mechanic).
 
 ---
@@ -102,3 +102,19 @@ If the founder would rather Winston review it as an independent agent, that is a
 3. On approval — apply both, open AMEND-002 (market scope) when counsel Q7.2 lands.
 
 — 📋 John
+
+
+---
+
+## Applied — 2026-11-27
+
+Founder approved as EL. AMEND-003 is applied to `PRD.md` per `delivery-framework.md §12` step 3.
+
+**Beyond the sections this amendment named**, the application swept the whole PRD for text describing the removed features and corrected: §2 "mobile-first prize competition platform"; §2 success criterion 2 (NLRC scrutiny); §3.3 skill-question resume window; §3.3 ticket-issue preconditions; §4 Ticket module scope; §4 module-ownership reviewer note; §10 Phase 0 counsel criterion; §10 beta-phase flows; §11 open questions 1, 4 and 5. Leaving those would have produced exactly the half-corrected specification John warned about in his owner review §1.
+
+One correction to this amendment's own text, found during application: the §3.2 wording proposed in AMEND-001 §6.3 said closure is enforced "at login, at ticket purchase and at skill-question issue". The skill-question enforcement point no longer exists — the module was unwired by AMEND-003, so that check is unreachable. The applied text names only login and ticket purchase.
+
+Still outstanding, and NOT part of this application:
+- **`delivery-framework.md`** §§49-52, 122, 131, 260, 321, 394 still reference free-route operationalisation and Legal-Counsel-approved free-entry copy. Needs its own amendment (Winston + John).
+- **ADR-004 §51, ADR-005 §67** free-entry references — Winston's amendment, not John's.
+- **AMEND-002** (V1 market scope: "Nigeria only" vs per-State licensing) remains open, gated on counsel Q7.2.

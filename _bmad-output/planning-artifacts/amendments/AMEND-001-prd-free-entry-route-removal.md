@@ -6,7 +6,7 @@
 **Proposed by:** ⚖️ Adaeze (atlas-compliance-risk)
 **Owner agent (must review per `delivery-framework.md §12` step 2):** 📋 **John** (bmad-agent-pm)
 **Approver:** S1408661 (Founder / Engineering Lead)
-**Status:** **PROPOSED — NOT APPLIED.** The PRD is unchanged on disk.
+**Status:** **APPLIED 2026-11-27.** Founder approved as EL; the PRD now reflects this amendment.
 
 ---
 
@@ -227,3 +227,19 @@ Opened as follow-ups:
 - **§7 product decision review** — founder-level, gated on counsel Q1/Q7. Not an amendment.
 
 — 📋 John
+
+
+---
+
+## Applied — 2026-11-27
+
+Founder approved as EL. AMEND-001 is applied to `PRD.md` per `delivery-framework.md §12` step 3.
+
+**Beyond the sections this amendment named**, the application swept the whole PRD for text describing the removed features and corrected: §2 "mobile-first prize competition platform"; §2 success criterion 2 (NLRC scrutiny); §3.3 skill-question resume window; §3.3 ticket-issue preconditions; §4 Ticket module scope; §4 module-ownership reviewer note; §10 Phase 0 counsel criterion; §10 beta-phase flows; §11 open questions 1, 4 and 5. Leaving those would have produced exactly the half-corrected specification John warned about in his owner review §1.
+
+One correction to this amendment's own text, found during application: the §3.2 wording proposed in AMEND-001 §6.3 said closure is enforced "at login, at ticket purchase and at skill-question issue". The skill-question enforcement point no longer exists — the module was unwired by AMEND-003, so that check is unreachable. The applied text names only login and ticket purchase.
+
+Still outstanding, and NOT part of this application:
+- **`delivery-framework.md`** §§49-52, 122, 131, 260, 321, 394 still reference free-route operationalisation and Legal-Counsel-approved free-entry copy. Needs its own amendment (Winston + John).
+- **ADR-004 §51, ADR-005 §67** free-entry references — Winston's amendment, not John's.
+- **AMEND-002** (V1 market scope: "Nigeria only" vs per-State licensing) remains open, gated on counsel Q7.2.
