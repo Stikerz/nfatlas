@@ -1360,6 +1360,163 @@ notes: |
 ---
 
 
+### 2026-11-27 — Draws tab: swipeable carousel for concurrent draws
+
+```yaml
+---
+ts: 2026-11-27T17:00:00Z
+agent: bmad-agent-dev (Amelia)
+session: claude-code
+artefact:
+  - mobile/lib/features/home/home_screen.dart (_DrawCarousel)
+  - mobile/test/features/draws/draw_carousel_test.dart (new, 7 tests)
+  - mobile/test/design/screen_goldens_test.dart + goldens/draws-carousel.png
+operation: created
+inputs:
+  - PRD.md §2 "Browse currently active draws" (plural — already in scope)
+human_review:
+  reviewer: Sally (bmad-agent-ux-designer) — not yet reviewed
+  status: not-yet-reviewed
+  comments: |
+    UI-only. No schema, no API, no spec amendment: the backend already
+    returned a list and the PRD already said "draws". Sally should see the
+    carousel treatment since no wireframe covers it.
+notes: |
+  SCOPE CHECK FIRST. The founder asked for swipe-browsing of concurrent
+  draws, not multiple prizes within one draw. Those are very different:
+  multi-prize would need a prizes table, a prize_id on draw_winners, and an
+  ADR-006 amendment because select_winners returns [primary, reserves] and
+  changing that changes what a published proof asserts. Swipe-browsing is
+  UI-only — GET /api/v1/draws already returns every sales_open draw with no
+  cap, ordered by close_time ascending, and PRD §2 already says "Browse
+  currently active draws", plural. Nothing to amend.
+
+  WHAT CHANGED. The Draws tab was a vertical ListView; it is now a
+  PageView carousel with viewportFraction 0.88 so the next card peeks —
+  without that a carousel reads as a single static card and nobody swipes.
+
+  ACCESSIBILITY DRIVEN THE DESIGN, not decorated it. A swipe-only surface
+  hides inventory from anyone who cannot perform a horizontal drag, so:
+  the page-indicator dots are real controls with 44pt touch targets and
+  Semantics labels ("Go to draw 3 of 3"), and each page announces its
+  position ("Draw 1 of 3") because a bare PageView gives a screen reader
+  no signal that more draws exist. With one draw the indicator and the
+  count are hidden entirely — dots that cannot move are noise, and
+  "1 draws open" is wrong anyway.
+
+  TESTS: 7, including the ordering contract (first page is the draw
+  closing soonest, matching the backend's order_by close_time) and the
+  single-draw and empty cases. Mutation-checked: setting the dots'
+  onTap to null fails exactly one test — "every draw is reachable WITHOUT
+  swiping" — and nothing else. The test guards the claim it names.
+
+  GOLDEN ADDED AND INSPECTED, not merely passed: three draws, the count,
+  the peeking second card, the elongated active dot.
+
+  FINDING SURFACED BY LOOKING AT THE GOLDEN — pre-existing, NOT fixed
+  here. _DrawCard derives its close label from close_time but its enter
+  affordance from state, so a draw past close_time whose state is still
+  sales_open renders "closed" AND "TAP TO ENTER" together. The backend
+  agrees with the CTA (it accepts purchases while state is sales_open),
+  so this is a labelling inconsistency during the window between
+  close_time passing and the operator closing the draw. Left alone
+  deliberately: it predates this change, it is not a carousel concern, and
+  "should a past-close draw still be enterable" is a product question.
+  Flagged for Sally and the founder.
+
+  VERIFICATION: 50/50 mobile (43 -> 50), 268/268 backend, 5/5 admin;
+  flutter analyze, make lint all green. Also exercised live — three
+  concurrent draws seeded through the admin API and confirmed returned in
+  close_time order by GET /api/v1/draws.
+---
+```
+
+---
+
+
+### 2026-11-27 — Sally's design review of the draws carousel (wireframe 16)
+
+```yaml
+---
+ts: 2026-11-27T18:30:00Z
+agent: bmad-agent-ux-designer (Sally)
+session: claude-code
+artefact:
+  - _bmad-output/planning-artifacts/design/wireframes/16-draws-carousel.md (new)
+  - mobile/lib/features/home/home_screen.dart
+  - mobile/test/features/draws/draw_carousel_test.dart
+  - mobile/test/design/goldens/draws-carousel.png (regenerated)
+operation: reviewed + amended
+inputs:
+  - PR #20; tone-doc.md Anchor 1 and §Palette; wireframe 02; tokens.md
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+  comments: |
+    §3 applied in this change. §4 are product decisions for the founder.
+notes: |
+  Design intent recorded for a surface that shipped before it was
+  specified — no wireframe covered a carousel.
+
+  THE RESERVATION WORTH KNOWING ABOUT. tone-doc Anchor 1 explicitly
+  rejects "the busy comparison-shopping bar of alternative prizes" from
+  BOTB, and a swipeable row of alternative prizes is structurally that
+  pattern. Approved anyway, with the distinction written down: BOTB's bar
+  sits ON the draw page, waving alternatives at someone mid-decision. This
+  is a dedicated browse tab a user chose to open. The boundary is hard —
+  this pattern must never appear on the draw detail page or in the entry
+  flow. A future "related draws" block under the entry CTA is the BOTB bar
+  and is out.
+
+  CHANGES APPLIED (§3):
+  - "3 draws open" removed. Quantity-as-signal is the register the tone
+    doc rejects, and it was redundant: the dots say "three" and the
+    Semantics labels say "of 3". Replaced with "Closing soonest first",
+    which names the ORDERING — the one thing the dots cannot communicate,
+    and which makes the close_time ordering legible without urgency copy.
+  - `primary: i == _page` removed. On Home that bordered treatment means
+    "the featured draw"; in the carousel it was being reused to mean "the
+    page you are on" — one visual, two meanings, two screens. Position,
+    cropped neighbours and the filled dot already say which page is
+    active.
+
+  §3.3 — CONSEQUENCE RECORDED RATHER THAN HIDDEN. Dropping `primary`
+  shrinks the display face, so the card now fills about a third of the
+  viewport and the rest is empty. I regenerated the golden and looked: it
+  reads sparse, not restrained. Not reversing — a misleading token is the
+  worse problem, and padding to fill space is not a reason to keep one —
+  but it is real, visible today, and resolves when §4.1 lands.
+
+  §4 RAISED FOR THE FOUNDER, not fixed:
+  - 4.1 There is no prize photography anywhere. DrawSummary has no image
+    field. tone-doc Anchor 1 says "prize photography dominates the fold".
+    Text-only reads as restrained for ONE featured draw; in a carousel of
+    three near-identical text cards it reads as a spreadsheet, which
+    defeats the emotional job of the surface. This is now the largest gap
+    between the tone doc and what ships. Needs prize_image_url, an
+    operator upload flow and a hero card treatment — Winston + John.
+  - 4.2 "closed" shown beside "TAP TO ENTER" (Amelia's finding, confirmed).
+    Recommendation: show "closing now" during the window between
+    close_time passing and the operator closing the draw, and keep the
+    CTA. Saying "closed" while accepting entries is the worse of the two
+    inconsistencies — a user who taps anyway and succeeds trusts us less.
+
+  COMMENDED: the peek (viewportFraction 0.88) is what makes a carousel
+  discoverable at all; the dots are real controls with 44pt targets rather
+  than decoration, which most carousels get wrong and which locks out
+  anyone who cannot drag horizontally; position is announced to screen
+  readers; the single-draw state hides the chrome. Also: no auto-advance
+  and no looping — both correct, and auto-advance would read as exactly
+  the urgency the tone doc bans.
+
+  VERIFICATION: 50/50 mobile, 268/268 backend, 5/5 admin; analyze and lint
+  green. Golden regenerated and inspected after the changes.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

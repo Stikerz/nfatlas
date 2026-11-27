@@ -165,12 +165,7 @@ class _DrawsPanel extends ConsumerWidget {
             body: 'Check back after the next commit-reveal cycle.',
           );
         }
-        return ListView.separated(
-          padding: const EdgeInsets.all(AtlasSpace.s600),
-          itemCount: draws.length,
-          separatorBuilder: (_, __) => const SizedBox(height: AtlasSpace.s400),
-          itemBuilder: (_, i) => _DrawCard(draw: draws[i]),
-        );
+        return _DrawCarousel(draws: draws);
       },
     );
   }
@@ -274,6 +269,153 @@ class _AccountPanel extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Horizontally swipeable browser for concurrent draws.
+///
+/// Replaces a vertical `ListView` (2026-11-27). Draws arrive ordered by
+/// `close_time` ascending from `draw_service.list_active`, so the one
+/// closing soonest is first — the order is now visible to the user, which
+/// it was not in a scrolling list, so it had better stay meaningful.
+///
+/// Two deliberate accessibility choices, because a swipe-only surface is
+/// easy to get wrong:
+///
+///  - The page indicator dots are **tappable**, not decorative. Swipe is
+///    not the only way to move between draws.
+///  - Each page is wrapped in a `Semantics` node announcing its position
+///    ("draw 2 of 3"), so a screen-reader user knows more draws exist.
+///    A bare PageView gives no such signal.
+///
+/// With a single draw the indicator is hidden entirely — dots that cannot
+/// move are noise.
+class _DrawCarousel extends StatefulWidget {
+  const _DrawCarousel({required this.draws});
+
+  final List<DrawSummary> draws;
+
+  @override
+  State<_DrawCarousel> createState() => _DrawCarouselState();
+}
+
+class _DrawCarouselState extends State<_DrawCarousel> {
+  late final PageController _controller;
+  int _page = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // viewportFraction < 1 leaves the neighbouring card peeking, which is
+    // the affordance that tells a user there is something to swipe to.
+    // Without it a carousel reads as a single static card.
+    _controller = PageController(viewportFraction: 0.88);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _goTo(int i) => _controller.animateToPage(
+        i,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final draws = widget.draws;
+    final multiple = draws.length > 1;
+
+    return Column(
+      children: [
+        const SizedBox(height: AtlasSpace.s500),
+        // Names the ordering rather than the quantity. Wireframe 16 §3.1:
+        // a count is inventory language ("94% sold!"), which tone-doc
+        // Anchor 1 rejects — and it is redundant, since the dots say
+        // "three" and the Semantics labels say "of 3". The organising
+        // principle is the thing the dots cannot communicate.
+        if (multiple)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AtlasSpace.s600),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Closing soonest first',
+                style: AtlasType.bodySmall.copyWith(
+                  color: AtlasColors.textSecondary,
+                ),
+              ),
+            ),
+          ),
+        if (multiple) const SizedBox(height: AtlasSpace.s300),
+        Expanded(
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: draws.length,
+            onPageChanged: (i) => setState(() => _page = i),
+            itemBuilder: (_, i) => Semantics(
+              label: multiple ? 'Draw ${i + 1} of ${draws.length}' : null,
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  left: AtlasSpace.s300,
+                  right: AtlasSpace.s300,
+                  bottom: AtlasSpace.s600,
+                ),
+                child: SingleChildScrollView(
+                  // NOT `primary: i == _page`. Wireframe 16 §3.2: on Home
+                  // the bordered treatment means "the featured draw"; reusing
+                  // it here to mean "the page you are on" gives one visual
+                  // two meanings across two screens. Being centred, with the
+                  // neighbours cropped and the dot filled, already says which
+                  // page is active.
+                  child: _DrawCard(draw: draws[i]),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (multiple)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AtlasSpace.s600),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                for (var i = 0; i < draws.length; i++)
+                  Semantics(
+                    button: true,
+                    selected: i == _page,
+                    label: 'Go to draw ${i + 1} of ${draws.length}',
+                    child: InkWell(
+                      onTap: () => _goTo(i),
+                      customBorder: const CircleBorder(),
+                      // 44pt minimum touch target around an 8pt dot.
+                      child: SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: i == _page ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: i == _page
+                                  ? AtlasColors.brandPrimary
+                                  : AtlasColors.dividerStrong,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 }

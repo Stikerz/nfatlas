@@ -104,6 +104,28 @@ class _FakeWinnersApi extends WinnersApi {
       ];
 }
 
+/// Same harness as [_host] but with a caller-supplied draw list, for the
+/// carousel golden.
+Widget _hostWithDraws(List<DrawSummary> draws) {
+  return ProviderScope(
+    overrides: [
+      ticketsApiProvider.overrideWithValue(_FakeTicketsApi()),
+      winnersApiProvider.overrideWithValue(_FakeWinnersApi()),
+      identityControllerProvider.overrideWith(
+        (ref) => IdentityController(IdentityApi(Dio()), SessionStorage()),
+      ),
+      walletBalanceProvider.overrideWith((ref) async => _wallet),
+      activeDrawsProvider.overrideWith((ref) async => draws),
+      myTicketsProvider.overrideWith((ref) async => <TicketSummary>[_ticket]),
+    ],
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: atlasTheme(),
+      home: const HomeScreen(),
+    ),
+  );
+}
+
 Widget _host(Widget screen) {
   return ProviderScope(
     overrides: [
@@ -158,6 +180,30 @@ final _draw = DrawSummary(
   state: 'sales_open',
   commitment:
       '40bc109598f824780aad5502b60253eea5d3328ddc676a2a07149a731adbac3f',
+);
+
+final _draw2 = DrawSummary(
+  id: '01919abc-0d6a-7000-8000-000000000002',
+  prizeCopy: 'Win a Toyota Corolla 2026, insured and delivered.',
+  ticketPriceMinor: 25000,
+  currency: 'NGN',
+  closeTime: DateTime.utc(2026, 9, 2, 13, 5),
+  drawTime: DateTime.utc(2026, 9, 2, 14, 5),
+  state: 'sales_open',
+  commitment:
+      '7c2b1e4a9d3f8056aa1c5502b60253eea5d3328ddc676a2a07149a731adbac3f',
+);
+
+final _draw3 = DrawSummary(
+  id: '01919abc-0d6a-7000-8000-000000000003',
+  prizeCopy: 'Win NGN 5,000,000 cash, paid within 48 hours.',
+  ticketPriceMinor: 100000,
+  currency: 'NGN',
+  closeTime: DateTime.utc(2026, 9, 6, 13, 5),
+  drawTime: DateTime.utc(2026, 9, 6, 14, 5),
+  state: 'sales_open',
+  commitment:
+      'b91f3c7e2a4d8056aa1c5502b60253eea5d3328ddc676a2a07149a731adbac3f',
 );
 
 /// Allows a small pixel budget so the goldens survive being generated on one
@@ -221,6 +267,31 @@ void main() {
     'entry-purchase': () => EntryPurchaseScreen(draw: _draw),
     'winner-claim': () => const WinnerClaimScreen(),
   };
+
+  // The Draws tab carousel needs its own case: the shared `_host` supplies a
+  // single draw, and the carousel only shows its indicator with more than
+  // one. Rendering it with three is the point — a reviewer should see what
+  // concurrent draws actually look like.
+  testWidgets('golden: draws-carousel', (tester) async {
+    tester.view.physicalSize = const Size(402, 874);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      _hostWithDraws(<DrawSummary>[_draw, _draw2, _draw3]),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('DRAWS'));
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/draws-carousel.png'),
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
+  });
 
   screens.forEach((name, build) {
     testWidgets('golden: $name', (tester) async {
