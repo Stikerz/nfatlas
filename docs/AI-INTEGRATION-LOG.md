@@ -1801,6 +1801,74 @@ notes: |
 ---
 
 
+### 2026-11-27 — VISUAL-WALKTHROUGH refreshed with a live mobile capture
+
+```yaml
+---
+ts: 2026-11-27T19:45:00Z
+agent: bmad-agent-dev (Amelia) + bmad-agent-tech-writer (Paige)
+session: claude-code
+artefact:
+  - docs/VISUAL-WALKTHROUGH.md
+  - docs/screens/mobile-draws-carousel-{1,2,3}.png (new)
+  - docs/screens/draws-walkthrough.mp4 (new)
+  - mobile/integration_test/walkthrough_test.dart (new)
+  - mobile/pubspec.yaml (integration_test dev dependency)
+operation: created + amended
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+notes: |
+  BROKEN REFERENCE FIXED — my own. AMEND-003 renamed the skill-question
+  golden to entry-purchase and I never updated VISUAL-WALKTHROUGH, so it
+  has carried a dead image link since 2026-11-26. Its surrounding copy was
+  worse than dead: it told readers the skill question "is the mechanism
+  that makes Atlas a prize competition rather than a lottery", which is no
+  longer Atlas's position at all. Replaced with the entry-purchase screen
+  and a note pointing at PRD §1.
+
+  LIVE CAPTURE ADDED. Everything in the mobile section was previously a
+  golden — one screen, rendered headlessly. The new section is an iOS
+  simulator running the real app against the real backend, driven by a new
+  integration_test harness and recorded while it ran: four seeded draws,
+  live countdowns, live commitment hashes, real prize photography loaded
+  over the network. Three stills plus a 0.9MB H.264 video.
+
+  THE REQUEST WAS FOR A SIGN-IN, AND THERE IS NO SIGN-IN. Trying to record
+  one surfaced it: identityApi.login is called in exactly one place, at the
+  end of registration (identity_controller.submitPassword), and the
+  "Already have an account? Sign in" text on the registration screen has NO
+  tap handler. A returning user whose 8-hour session has lapsed has no
+  route back into their account. Recorded in the walkthrough as a gap
+  rather than worked around.
+
+  Registration could not be driven either: date of birth is a Material
+  showDatePicker behind a tap target, not a text field, and the dialog did
+  not open under the harness. Rather than keep fighting it, the harness was
+  narrowed to the carousel — which is the substance of what was asked
+  ("seeing multiple test prizes") — and the sign-in gap reported.
+
+  HONESTY CAVEATS WRITTEN INTO THE DOC, not just the commit. The
+  photography is NOT on main: it lives on spike/prize-photography,
+  deliberately unmerged because it adds a DB column and a bare URL column
+  trusts whatever an operator pastes. The images are Lorem Picsum
+  placeholders proving the TREATMENT, not content fit. The capture harness
+  reaches the Draws tab by temporarily routing past the splash router; that
+  hack is reverted and absent from shipped code, and the doc says so.
+
+  Also wasted a cycle recording against main before noticing main has the
+  carousel but not the photography — the spike was never merged. Caught by
+  the harness asserting find.byType(Image) found zero, which is exactly why
+  a capture harness should assert rather than just record.
+
+  VERIFICATION: 52/52 mobile, 268/268 backend, 5/5 admin; analyze and lint
+  green. Every image and video reference in the walkthrough resolves.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:

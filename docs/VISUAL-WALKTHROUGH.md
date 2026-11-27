@@ -12,8 +12,10 @@ consumers, a genuine commit-reveal cycle. Nothing here is a mockup.
 |---|---|
 | Web surfaces | Playwright against the running admin, in `docs/screens/` |
 | Mobile surfaces | Flutter goldens, in `mobile/test/design/goldens/` |
+| Mobile, live | iOS simulator against the running stack, in `docs/screens/mobile-*` |
 | Regenerate web | `infrastructure/scripts/capture_screens.py` |
 | Regenerate mobile | `cd mobile && flutter test test/design/screen_goldens_test.dart --update-goldens` |
+| Re-record the live capture | `cd mobile && flutter test integration_test/walkthrough_test.dart -d SIMULATOR_ID` |
 
 Because the mobile shots are goldens, a UI change shows up as an image
 diff in the pull request that caused it.
@@ -100,14 +102,78 @@ Wallet chip, the active draw, and the commitment shown to the consumer before th
 ![Home](../mobile/test/design/goldens/home.png)
 
 
-### Skill question
+### Buying an entry
 
 `sales_open`
 
-Mandatory on every paid entry. This is the mechanism that makes Atlas a prize competition rather than a lottery, so it is a gate rather than a formality.
+Prize, price, and what happens next — stated before the purchase action, including that entries are not refundable once the draw closes.
 
-![Skill question](../mobile/test/design/goldens/skill-question.png)
+![Entry purchase](../mobile/test/design/goldens/entry-purchase.png)
 
+> **This screen replaced a skill question on 2026-11-26** (AMEND-003). The earlier
+> version of this page said the skill question "is the mechanism that makes Atlas a
+> prize competition rather than a lottery". That is no longer Atlas's position: the
+> 2026-11-23 research found no skill carve-out in the governing State law, the free
+> entry route had already been removed on 2026-11-23, and lawfulness now rests on
+> holding a State gaming licence rather than on any draw mechanic. See PRD §1.
+
+
+### Browsing concurrent draws — live capture
+
+`sales_open`
+
+Everything above is a golden: a single screen, rendered headlessly. This
+section is different — it is an **iOS simulator running the real app
+against the real backend**, driven by `integration_test/walkthrough_test.dart`
+and recorded while it ran. The prize photography, the countdowns and the
+commitment hashes are all live data.
+
+Four draws are open. They arrive from `GET /api/v1/draws` ordered by
+`close_time` ascending, so the one closing soonest leads — urgency drives
+position without any urgency copy.
+
+![Draws carousel — first draw](screens/mobile-draws-carousel-1.png)
+
+Swiping advances through them. The next card is deliberately left peeking
+at the edge: without that, a carousel reads as a single static card and
+nobody swipes.
+
+![Draws carousel — second draw](screens/mobile-draws-carousel-2.png)
+
+![Draws carousel — fourth draw](screens/mobile-draws-carousel-3.png)
+
+Watch the page indicator across the three shots. **The dots are controls,
+not decoration** — 44pt touch targets with semantics labels, so every draw
+is reachable without a horizontal drag, and each page announces its
+position to a screen reader. A test asserts it: removing the dots' tap
+handler fails `every draw is reachable WITHOUT swiping` and nothing else.
+
+#### The recording
+
+[`screens/draws-walkthrough.mp4`](screens/draws-walkthrough.mp4) — the
+same sequence as video: four draws browsed forward, then back to the first
+via the page indicator rather than by swiping.
+
+#### Two things this capture does not show, and should not be read as showing
+
+**It is not a sign-in.** There is no sign-in flow in the app. `identityApi.login`
+is called in exactly one place — at the end of registration, in
+`identity_controller.submitPassword` — and the *"Already have an account? Sign in"*
+text on the registration screen has no tap handler. A returning user whose
+8-hour session has lapsed has no route back into their account. The capture
+harness reaches this screen by temporarily routing the app past the splash
+router; that hack is reverted and is not in the shipped code. **Recorded here
+as a gap, not worked around.**
+
+**The photography is not on `main`.** `prize_image_url` and the full-bleed card
+treatment live on `spike/prize-photography`, which is deliberately unmerged —
+it adds a database column, and a bare URL column trusts whatever an operator
+pastes into it. See `planning-artifacts/prize-photography-scope.md`. On `main`
+today these cards render the text-only fallback. The images themselves are
+Lorem Picsum placeholders standing in for real prize photography; they prove
+the *treatment*, not content fit.
+
+---
 
 ## 3 · Closing and revealing — the operator
 
