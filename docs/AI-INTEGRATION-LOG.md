@@ -1145,6 +1145,158 @@ notes: |
 ---
 
 
+### 2026-11-27 — Live app verification: two defects tests did not catch
+
+```yaml
+---
+ts: 2026-11-27T10:00:00Z
+agent: bmad-agent-dev (Amelia)
+session: claude-code
+artefact:
+  - infrastructure/scripts/demo_rehearsal.sh
+  - atlas.identity.session_service (AccountClosed)
+  - backend/tests/identity/test_self_exclusion.py
+operation: amended
+inputs:
+  - docs/adr/ADR-010 §Enforcement points
+  - AMEND-003 (skill question removal)
+human_review:
+  reviewer: Adaeze (login copy is consumer-facing) + S1408661 (EL)
+  status: not-yet-reviewed
+notes: |
+  Ran the actual stack rather than only the suite. Two defects surfaced
+  that 268 green tests did not.
+
+  1. DEMO REHEARSAL WAS BROKEN BY AMEND-003. The repo's own flagship smoke
+     script still answered a skill question and posted entitlement_id.
+     Nothing in CI runs it, so the suite stayed green while the script that
+     proves the demo honest was dead. It is a W9 §8 gate. Fixed: the
+     answer-key helper is gone (and with it the ~47%-of-runs flake it once
+     caused) and purchase posts draw_id alone. All 9 steps green.
+
+  2. LOGIN CONTRADICTED ADR-010. §Enforcement points says a self-excluded
+     user gets "this account has been closed"; live, they got
+     invalid_credentials — indistinguishable from a typo, so a person who
+     chose to stop is nudged to retry or contact support. The cause was
+     ordering: status was checked BEFORE the password, so returning a
+     distinct message there would have let anyone enumerate closed
+     accounts by email alone. Reordered to verify the password first, then
+     raise AccountClosed (403) only for a caller who has proved they hold
+     the credentials; a wrong password on a closed account still returns
+     invalid_credentials. Also the more timing-uniform order. Two tests
+     added, including one asserting the non-disclosure.
+
+  THIRD FINDING, PROCESS NOT PRODUCT. The rehearsal discarded the webhook
+  response with >/dev/null, so a signature rejection surfaced three steps
+  later as "no ticket minted for first consumer". That cost a debug cycle
+  chasing a phantom bug in my own change. It now checks the status and
+  names the likely cause (the caller's shell lacking
+  ATLAS_PAYSTACK_WEBHOOK_SECRET while docker compose reads it from .env).
+  Demonstrated both ways: fails at step 2 with HTTP 401 without the
+  secret, green with it.
+
+  DRIVEN LIVE, NOT JUST LAUNCHED:
+  - OpenAPI confirms no skill routes and no /tickets/free remain.
+  - Full flagship flow: register -> purchase (no entitlement) -> signed
+    webhook -> ticket minted -> close -> reveal -> proof -> independent
+    verifier reproduces the winner -> audit chain verified. 6 winners.
+  - Self-exclusion end to end: purchase 201 before; wrong MFA 400 with no
+    state change; real MFA 201 (sessions_revoked 1, reversible false,
+    cross_account_enforced false); old session 401; re-login 403
+    account_closed; DB shows status=closed, bvn_hash NULL,
+    excluded_by=user_self; audit carries bvn_enforced=false;
+    re-registration with a new email returns 201 — the documented Phase A
+    limit, observed rather than assumed.
+  - Admin UI: /admin/self-exclusions is 307 to /login when unauthenticated
+    and renders the live exclusion row as superadmin. Sidebar no longer
+    offers Free entries or Skill questions.
+  - Public pages: no "skill question", "prize competition", "free entry"
+    or "not a lottery" anywhere in the rendered text; responsible-play
+    carries the balance disclosure and the in-app route.
+
+  NOT VERIFIED LIVE: the Flutter app. flutter analyze, 42 widget/golden
+  tests and a regenerated golden cover EntryPurchaseScreen, but no
+  simulator was driven. That gap stands.
+
+  VERIFICATION: 268/268 backend + 5/5 admin + 42/42 mobile; make typecheck,
+  make lint, ADR-002 outbox gate all green; demo_rehearsal.sh green.
+---
+```
+
+---
+
+
+### 2026-11-27 — Flutter app driven on a simulator; REVIEW-004
+
+```yaml
+---
+ts: 2026-11-27T11:30:00Z
+agent: bmad-agent-dev (Amelia) + atlas-compliance-risk (Adaeze)
+session: claude-code
+artefact:
+  - docs/compliance/reviews/REVIEW-004-closed-account-login-message.md (new)
+  - mobile/lib/services/api_client.dart (docstring correction)
+operation: reviewed + amended
+human_review:
+  reviewer: S1408661 (Founder / EL)
+  status: not-yet-reviewed
+notes: |
+  CLOSED THE GAP NAMED YESTERDAY. The Flutter app had been verified only
+  by analyze and widget/golden tests. It has now been built for iOS and
+  launched on a booted iPhone 17 Pro simulator (iOS 26.5) against the live
+  backend; a screenshot confirms the registration screen renders — a real
+  launch, not a blank frame. The regenerated entry-purchase golden was
+  also inspected rather than trusted: prize copy, "One entry", correct
+  ₦500 formatting from 50000 minor units, the non-refundable disclosure
+  and the "Pay ₦500 and enter" action all render, with no skill question
+  anywhere.
+
+  NOT FULLY DRIVEN, AND WHY. Automating the simulator UI to reach
+  EntryPurchaseScreen needs accessibility permission for osascript, which
+  macOS refuses (-1719) and which is a system privacy setting I declined
+  to change on the founder's machine to serve a test. idb is not
+  installed. So the screen is verified by golden render plus direct API
+  exercise, not by a tap-through. The gap is narrower than yesterday, not
+  closed.
+
+  NEW FINDING — api_client docstring was wrong. It claimed
+  "iOS simulator, Android emulator + Chrome dev: http://localhost:8000
+  works". Chrome does NOT work: the backend registers no CORS middleware,
+  and a live probe returned OPTIONS 405 with no Access-Control-Allow-Origin
+  header, so any browser-hosted build is blocked at preflight. Corrected,
+  and the remedy flagged as Tobi's — CORS allowed-origins is
+  security-relevant config, not a dev convenience, and I would not add it
+  merely to make my own verification pass. Flutter web DOES build
+  successfully; it just cannot reach the API from a browser.
+
+  REVIEW-004 (Adaeze) — approved the closed-account login message. She
+  recorded that she had missed it herself in REVIEW-002 Addendum B:
+  she verified login was REFUSED but not what the refused user was TOLD,
+  and those are different questions. Her note on why it matters: a person
+  returning after self-excluding, often at the point of weakest resolve,
+  was told their password was wrong — predictably prompting a retry, a
+  reset, or a support contact, three further touchpoints with a platform
+  they asked to be shut out of. The control worked; the communication
+  undermined it.
+
+  She also notes the disclosure risk the fix had to avoid: exclusion
+  status indicates a user's relationship with gambling harm and is
+  plausibly NDPA special-category data (counsel Q4), so the closed-account
+  message is gated behind the password check and a test asserts the
+  non-disclosure.
+
+  STANDING REQUIREMENT EXTENDED. Addendum A.4 required code plus a test
+  behind every claim. Adaeze extends it: where an ADR specifies what a
+  user is TOLD, the assertion must cover the message, not merely the
+  outcome. Fourth defect this month in the same family — a documented
+  behaviour the system did not exhibit — but the first where the ADR was
+  right and the implementation drifted, rather than copy overclaiming.
+---
+```
+
+---
+
+
 ## What's next
 
 Post-V0.5 items tracked in `v0.5-close.md`:
